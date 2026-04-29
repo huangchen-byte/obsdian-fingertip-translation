@@ -1,15 +1,19 @@
 import {App, PluginSettingTab, Setting} from "obsidian";
 import MyPlugin from "./main";
 
-export interface MyPluginSettings {
-	mySetting: string;
+export interface TranslationPluginSettings {
+	autoPlayTTS: boolean;
+	accent: "us" | "uk";
+	triggerMode: "ctrl" | "auto";
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
+export const DEFAULT_SETTINGS: TranslationPluginSettings = {
+	autoPlayTTS: false,
+	accent: "us",
+	triggerMode: "ctrl"
+};
 
-export class SampleSettingTab extends PluginSettingTab {
+export class TranslationSettingTab extends PluginSettingTab {
 	plugin: MyPlugin;
 
 	constructor(app: App, plugin: MyPlugin) {
@@ -19,18 +23,80 @@ export class SampleSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const {containerEl} = this;
-
 		containerEl.empty();
 
+		containerEl.createEl("h2", {text: "📖 划词翻译设置"});
+
+		// ========== 翻译服务 ==========
+		containerEl.createEl("h3", {text: "翻译服务"});
+
+		containerEl.createEl("p", {
+			text: "🌐 MyMemory 免费翻译，每天 1000 次请求，无需 API Key",
+			cls: "mod-secondary"
+		});
+
+		// ========== 触发方式 ==========
+		containerEl.createEl("h3", {text: "触发方式"});
+
 		new Setting(containerEl)
-			.setName('Settings #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+			.setName("划词触发方式")
+			.setDesc("如何触发翻译弹窗")
+			.addDropdown(dropdown => dropdown
+				.addOption("ctrl", "Ctrl + 划选（推荐）")
+				.addOption("auto", "直接划选")
+				.setValue(this.plugin.settings.triggerMode)
 				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
+					this.plugin.settings.triggerMode = value as "ctrl" | "auto";
 					await this.plugin.saveSettings();
 				}));
+
+		// ========== 发音设置 ==========
+		containerEl.createEl("h3", {text: "发音设置"});
+
+		new Setting(containerEl)
+			.setName("自动发音")
+			.setDesc("翻译成功后自动播放发音")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoPlayTTS)
+				.onChange(async (value) => {
+					this.plugin.settings.autoPlayTTS = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("发音口音")
+			.setDesc("选择 TTS 发音的口音")
+			.addDropdown(dropdown => dropdown
+				.addOption("us", "🇺🇸 美式英语 (US)")
+				.addOption("uk", "🇬🇧 英式英语 (UK)")
+				.setValue(this.plugin.settings.accent)
+				.onChange(async (value) => {
+					this.plugin.settings.accent = value as "us" | "uk";
+					await this.plugin.saveSettings();
+				}));
+
+		// ========== 使用说明 ==========
+		containerEl.createEl("h3", {text: "使用说明"});
+
+		const triggerTip = this.plugin.settings.triggerMode === "ctrl"
+			? "按住 Ctrl 键并划选文本"
+			: "直接划选文本";
+
+		containerEl.createEl("p", {
+			text: `📌 触发方式：${triggerTip}`,
+			cls: "mod-secondary"
+		});
+
+		if (this.plugin.settings.autoPlayTTS) {
+			containerEl.createEl("p", {
+				text: "🔊 自动发音：已开启",
+				cls: "mod-secondary"
+			});
+		}
+
+		containerEl.createEl("p", {
+			text: "🔊 点击喇叭按钮可手动发音",
+			cls: "mod-secondary"
+		});
 	}
 }
