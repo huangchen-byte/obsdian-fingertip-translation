@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-fingertip-translation",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "划词翻译插件 - 按住 Ctrl 键并划选文本即可翻译，支持即时发音。",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

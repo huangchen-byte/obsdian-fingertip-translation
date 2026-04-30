@@ -1,11 +1,9 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "fingertip-translation",
+	"name": "Fingertip Translation",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "划词翻译插件 - 按住 Ctrl 键并划选文本即可翻译，支持即时发音。",
+	"author": "huangch",
 	"isDesktopOnly": false
 }
