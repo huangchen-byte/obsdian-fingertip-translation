@@ -24,6 +24,7 @@ export interface MymemoryResponse {
 
 export interface TranslationResult {
 	translation: string;
+	meanings?: Array<{pos: string; def: string}>;
 	speakUrl?: string;
 	error?: string;
 }

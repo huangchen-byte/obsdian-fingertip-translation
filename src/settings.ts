@@ -5,12 +5,16 @@ export interface TranslationPluginSettings {
 	autoPlayTTS: boolean;
 	accent: "us" | "uk";
 	triggerMode: "ctrl" | "auto";
+	translationService: "mymemory" | "bing";
+	ttsService: "youdao" | "browser";
 }
 
 export const DEFAULT_SETTINGS: TranslationPluginSettings = {
 	autoPlayTTS: false,
 	accent: "us",
-	triggerMode: "ctrl"
+	triggerMode: "ctrl",
+	translationService: "mymemory",
+	ttsService: "youdao"
 };
 
 export class TranslationSettingTab extends PluginSettingTab {
@@ -30,10 +34,17 @@ export class TranslationSettingTab extends PluginSettingTab {
 		// ========== 翻译服务 ==========
 		containerEl.createEl("h3", {text: "翻译服务"});
 
-		containerEl.createEl("p", {
-			text: "🌐 MyMemory 免费翻译，每天 1000 次请求，无需 API Key",
-			cls: "mod-secondary"
-		});
+		new Setting(containerEl)
+			.setName("翻译服务")
+			.setDesc("选择翻译服务提供商")
+			.addDropdown(dropdown => dropdown
+				.addOption("mymemory", "MyMemory (免费，每天 1000 次)")
+				.addOption("bing", "Bing 词典 (免费，无限次)")
+				.setValue(this.plugin.settings.translationService)
+				.onChange(async (value) => {
+					this.plugin.settings.translationService = value as "mymemory" | "bing";
+					await this.plugin.saveSettings();
+				}));
 
 		// ========== 触发方式 ==========
 		containerEl.createEl("h3", {text: "触发方式"});
@@ -52,6 +63,18 @@ export class TranslationSettingTab extends PluginSettingTab {
 
 		// ========== 发音设置 ==========
 		containerEl.createEl("h3", {text: "发音设置"});
+
+		new Setting(containerEl)
+			.setName("发音来源")
+			.setDesc("选择发音服务")
+			.addDropdown(dropdown => dropdown
+				.addOption("youdao", "有道音频 (推荐，音质更好)")
+				.addOption("browser", "浏览器 TTS")
+				.setValue(this.plugin.settings.ttsService)
+				.onChange(async (value) => {
+					this.plugin.settings.ttsService = value as "youdao" | "browser";
+					await this.plugin.saveSettings();
+				}));
 
 		new Setting(containerEl)
 			.setName("自动发音")
@@ -87,16 +110,16 @@ export class TranslationSettingTab extends PluginSettingTab {
 			cls: "mod-secondary"
 		});
 
+		containerEl.createEl("p", {
+			text: "🔊 弹窗可拖拽移动，点击 × 或按 ESC 关闭",
+			cls: "mod-secondary"
+		});
+
 		if (this.plugin.settings.autoPlayTTS) {
 			containerEl.createEl("p", {
 				text: "🔊 自动发音：已开启",
 				cls: "mod-secondary"
 			});
 		}
-
-		containerEl.createEl("p", {
-			text: "🔊 点击喇叭按钮可手动发音",
-			cls: "mod-secondary"
-		});
 	}
 }
