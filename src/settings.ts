@@ -13,7 +13,7 @@ export const DEFAULT_SETTINGS: TranslationPluginSettings = {
 	autoPlayTTS: false,
 	accent: "us",
 	triggerMode: "ctrl",
-	translationService: "mymemory",
+	translationService: "bing",
 	ttsService: "youdao"
 };
 
@@ -29,17 +29,17 @@ export class TranslationSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", {text: "📖 划词翻译设置"});
+		containerEl.createEl("h2", {text: "翻译设置", cls: "fingertip-settings-title"});
 
 		// ========== 翻译服务 ==========
-		containerEl.createEl("h3", {text: "翻译服务"});
+		// containerEl.createEl("h3", {text: "翻译服务", cls: "fingertip-settings-title"});
 
 		new Setting(containerEl)
 			.setName("翻译服务")
 			.setDesc("选择翻译服务提供商")
 			.addDropdown(dropdown => dropdown
+                .addOption("bing", "Bing 词典 (免费，无限次)")
 				.addOption("mymemory", "MyMemory (免费，每天 1000 次)")
-				.addOption("bing", "Bing 词典 (免费，无限次)")
 				.setValue(this.plugin.settings.translationService)
 				.onChange(async (value) => {
 					this.plugin.settings.translationService = value as "mymemory" | "bing";
@@ -47,7 +47,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 				}));
 
 		// ========== 触发方式 ==========
-		containerEl.createEl("h3", {text: "触发方式"});
+		// containerEl.createEl("h3", {text: "触发方式", cls: "fingertip-settings-title"});
 
 		new Setting(containerEl)
 			.setName("划词触发方式")
@@ -62,7 +62,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 				}));
 
 		// ========== 发音设置 ==========
-		containerEl.createEl("h3", {text: "发音设置"});
+		// containerEl.createEl("h3", {text: "发音设置", cls: "fingertip-settings-title"});
 
 		new Setting(containerEl)
 			.setName("发音来源")
@@ -97,29 +97,5 @@ export class TranslationSettingTab extends PluginSettingTab {
 					this.plugin.settings.accent = value as "us" | "uk";
 					await this.plugin.saveSettings();
 				}));
-
-		// ========== 使用说明 ==========
-		containerEl.createEl("h3", {text: "使用说明"});
-
-		const triggerTip = this.plugin.settings.triggerMode === "ctrl"
-			? "按住 Ctrl 键并划选文本"
-			: "直接划选文本";
-
-		containerEl.createEl("p", {
-			text: `📌 触发方式：${triggerTip}`,
-			cls: "mod-secondary"
-		});
-
-		containerEl.createEl("p", {
-			text: "🔊 弹窗可拖拽移动，点击 × 或按 ESC 关闭",
-			cls: "mod-secondary"
-		});
-
-		if (this.plugin.settings.autoPlayTTS) {
-			containerEl.createEl("p", {
-				text: "🔊 自动发音：已开启",
-				cls: "mod-secondary"
-			});
-		}
 	}
 }

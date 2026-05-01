@@ -4,6 +4,6 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "划词翻译插件 - 按住 Ctrl 键并划选文本即可翻译，支持即时发音。",
-	"author": "huangch",
+	"author": "amos",
 	"isDesktopOnly": false
 }

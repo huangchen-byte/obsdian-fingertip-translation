@@ -105,10 +105,33 @@
 	font-style: normal;
 }
 
-/* 错误状态 */
+/* 翻译悬浮窗错误状态 */
 .fingertip-translation-error {
-	border-color: var(--text-error);
-	background: var(--background-secondary-alt);
+	position: absolute;
+	z-index: 10000;
+	background: var(--background-secondary);
+	border: 1px solid var(--text-error);
+	border-radius: 8px;
+	padding: 8px 10px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	min-width: 0;
+	width: max-content;
+	font-size: 13px;
+	line-height: 1.6;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	animation: fingertip-translation-fadein 0.15s ease-out;
+	touch-action: none;
+	user-select: none;
+}
+
+/* 设置页面大标题样式 */
+.fingertip-settings-title {
+	font-size: 22px !important;
+	color: #000000 !important;
+	font-weight: 600 !important;
+	margin-top: 0 !important;
 }
 
 .fingertip-translation-error .popover-original,
