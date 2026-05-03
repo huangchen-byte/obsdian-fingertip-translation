@@ -134,6 +134,68 @@
 	margin-top: 0 !important;
 }
 
+/* 音标样式 - 放在单词下一行 */
+.popover-phonetic {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.phonetic-line {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.phonetic-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.phonetic-text {
+	font-size: 12px;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+/* 音标行的小喇叭按钮 */
+.phonetic-tts {
+	background: none !important;
+	border: none !important;
+	outline: none !important;
+	box-shadow: none !important;
+	cursor: pointer;
+	padding: 0;
+	color: var(--text-faint);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: color 0.15s ease;
+}
+
+.phonetic-tts:hover {
+	color: var(--text-muted);
+}
+
+.phonetic-tts:active {
+	color: var(--text-primary);
+}
+
+.phonetic-tts svg {
+	width: 14px !important;
+	height: 14px !important;
+}
+
+/* 设置页面分组标题样式 */
+.fingertip-settings-section-title {
+	font-size: 16px !important;
+	color: var(--text-normal) !important;
+	font-weight: 600 !important;
+	margin-top: 16px !important;
+	margin-bottom: 8px !important;
+}
+
 .fingertip-translation-error .popover-original,
 .fingertip-translation-error .popover-translation {
 	color: var(--text-error);

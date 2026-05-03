@@ -27,6 +27,10 @@ export interface TranslationResult {
 	meanings?: Array<{pos: string; def: string}>;
 	speakUrl?: string;
 	error?: string;
+	phonetics?: {
+		us?: string;
+		uk?: string;
+	};
 }
 
 // 语言代码映射

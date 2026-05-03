@@ -13,6 +13,10 @@ export interface TranslationResult {
 	meanings?: Array<{pos: string; def: string}>;
 	speakUrl?: string;
 	error?: string;
+	phonetics?: {
+		us?: string;
+		uk?: string;
+	};
 }
 
 /**
@@ -79,11 +83,27 @@ export async function translate(
 			return {translation: "", error: "未找到有效释义"};
 		}
 
+		// 解析音标
+		const phonetics: {us?: string; uk?: string} = {};
+
+		// 美式音标 - class 包含 "hd_prUS"
+		const usEl = doc.querySelector("[class*='hd_prUS']");
+		if (usEl) {
+			phonetics.us = usEl.textContent?.trim() || "";
+		}
+
+		// 英式音标 - class 包含 "hd_pr" 但不包含 "US"
+		const ukEl = doc.querySelector("[class*='hd_pr']:not([class*='US'])");
+		if (ukEl) {
+			phonetics.uk = ukEl.textContent?.trim() || "";
+		}
+
 		// 构建纯文本版本
 		const textParts = meanings.map(m => m.pos ? `${m.pos} ${m.def}` : m.def);
 		return {
 			translation: textParts.join("  "),
-			meanings: meanings
+			meanings: meanings,
+			phonetics: Object.keys(phonetics).length > 0 ? phonetics : undefined
 		};
 	} catch (error) {
 		return {

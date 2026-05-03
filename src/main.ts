@@ -75,6 +75,9 @@ export default class MyPlugin extends Plugin {
 			// 获取 meanings 数据（用于 Bing 翻译的词性着色）
 			const meanings = "meanings" in result ? result.meanings : undefined;
 
+			// 获取音标数据
+			const phonetics = "phonetics" in result ? result.phonetics : undefined;
+
 			// 显示悬浮窗
 			this.showPopover({
 				text: result.translation || result.error || "翻译失败",
@@ -84,7 +87,8 @@ export default class MyPlugin extends Plugin {
 				hasError: !!result.error,
 				x: rect.left + rect.width / 2,
 				y: rect.top,
-				meanings: meanings
+				meanings: meanings,
+				phonetics: phonetics
 			});
 
 			// 自动发音（如果设置开启）
@@ -218,6 +222,7 @@ export default class MyPlugin extends Plugin {
 		x: number;
 		y: number;
 		meanings?: Array<{pos: string; def: string}>;
+		phonetics?: {us?: string; uk?: string};
 	}) {
 		// 如果已存在，先移除
 		this.hidePopover();
@@ -229,7 +234,8 @@ export default class MyPlugin extends Plugin {
 			popover.classList.add("fingertip-translation-error");
 		}
 
-		// 第一行：单词 + 发音按钮
+		// 第一行：单词 + 发音按钮（如果开启显示音标则隐藏单词后面的小喇叭）
+		const showMainTts = options.originalText && options.speakLang && !this.settings.showPhonetic;
 		const headerDiv = document.createElement("div");
 		headerDiv.className = "popover-header";
 
@@ -241,8 +247,8 @@ export default class MyPlugin extends Plugin {
 			headerDiv.appendChild(originalDiv);
 		}
 
-		// 发音按钮
-		if (options.originalText && options.speakLang) {
+		// 发音按钮（当不显示美英两个音标时显示）
+		if (showMainTts) {
 			const ttsBtn = document.createElement("button");
 			ttsBtn.className = "fingertip-translation-tts";
 			ttsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
@@ -255,6 +261,109 @@ export default class MyPlugin extends Plugin {
 		}
 
 		popover.appendChild(headerDiv);
+
+		// 显示音标（第二行）
+		if (this.settings.showPhonetic && options.phonetics) {
+			const phoneticDiv = document.createElement("div");
+			phoneticDiv.className = "popover-phonetic";
+
+			const createPhoneticLine = (text: string, accent: "us" | "uk") => {
+				const lineDiv = document.createElement("div");
+				lineDiv.className = "phonetic-line";
+
+				// 音标文本
+				const textSpan = document.createElement("span");
+				textSpan.className = "phonetic-text";
+				textSpan.textContent = text;
+				lineDiv.appendChild(textSpan);
+
+				// 喇叭按钮
+				const ttsBtn = document.createElement("button");
+				ttsBtn.className = "fingertip-translation-tts phonetic-tts";
+				ttsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+				ttsBtn.title = `点击播放${accent === "us" ? "美" : "英"}式发音`;
+				ttsBtn.onclick = (e) => {
+					e.stopPropagation();
+					// 临时切换口音播放
+					const prevAccent = this.settings.accent;
+					this.settings.accent = accent;
+					this.playTTS(options.originalText!);
+					this.settings.accent = prevAccent;
+				};
+				lineDiv.appendChild(ttsBtn);
+
+				return lineDiv;
+			};
+
+			if (this.settings.phoneticMode === "both") {
+				// 同一行显示美式和英式音标
+				const lineDiv = document.createElement("div");
+				lineDiv.className = "phonetic-line";
+
+				if (options.phonetics.us) {
+					const usContainer = document.createElement("span");
+					usContainer.className = "phonetic-item";
+
+					const usText = document.createElement("span");
+					usText.className = "phonetic-text";
+					usText.textContent = options.phonetics.us;
+					usContainer.appendChild(usText);
+
+					const usBtn = document.createElement("button");
+					usBtn.className = "fingertip-translation-tts phonetic-tts";
+					usBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+					usBtn.title = "点击播放美式发音";
+					usBtn.onclick = (e) => {
+						e.stopPropagation();
+						const prevAccent = this.settings.accent;
+						this.settings.accent = "us";
+						this.playTTS(options.originalText!);
+						this.settings.accent = prevAccent;
+					};
+					usContainer.appendChild(usBtn);
+
+					lineDiv.appendChild(usContainer);
+				}
+
+				if (options.phonetics.uk) {
+					const ukContainer = document.createElement("span");
+					ukContainer.className = "phonetic-item";
+
+					const ukText = document.createElement("span");
+					ukText.className = "phonetic-text";
+					ukText.textContent = options.phonetics.uk;
+					ukContainer.appendChild(ukText);
+
+					const ukBtn = document.createElement("button");
+					ukBtn.className = "fingertip-translation-tts phonetic-tts";
+					ukBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+					ukBtn.title = "点击播放英式发音";
+					ukBtn.onclick = (e) => {
+						e.stopPropagation();
+						const prevAccent = this.settings.accent;
+						this.settings.accent = "uk";
+						this.playTTS(options.originalText!);
+						this.settings.accent = prevAccent;
+					};
+					ukContainer.appendChild(ukBtn);
+
+					lineDiv.appendChild(ukContainer);
+				}
+
+				phoneticDiv.appendChild(lineDiv);
+			} else {
+				// 根据设置显示对应音标
+				const accent = this.settings.accent;
+				const phoneticText = accent === "us" ? options.phonetics.us : options.phonetics.uk;
+				if (phoneticText) {
+					phoneticDiv.appendChild(createPhoneticLine(phoneticText, accent));
+				}
+			}
+
+			if (phoneticDiv.children.length > 0) {
+				popover.appendChild(phoneticDiv);
+			}
+		}
 
 		// 翻译文本容器（用于拖拽）
 		const contentDiv = document.createElement("div");

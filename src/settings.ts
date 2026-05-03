@@ -7,6 +7,8 @@ export interface TranslationPluginSettings {
 	triggerMode: "ctrl" | "auto";
 	translationService: "mymemory" | "bing";
 	ttsService: "youdao" | "browser";
+	showPhonetic: boolean;
+	phoneticMode: "single" | "both";
 }
 
 export const DEFAULT_SETTINGS: TranslationPluginSettings = {
@@ -14,7 +16,9 @@ export const DEFAULT_SETTINGS: TranslationPluginSettings = {
 	accent: "us",
 	triggerMode: "ctrl",
 	translationService: "bing",
-	ttsService: "youdao"
+	ttsService: "youdao",
+	showPhonetic: true,
+	phoneticMode: "both"
 };
 
 export class TranslationSettingTab extends PluginSettingTab {
@@ -32,7 +36,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 		containerEl.createEl("h2", {text: "翻译设置", cls: "fingertip-settings-title"});
 
 		// ========== 翻译服务 ==========
-		// containerEl.createEl("h3", {text: "翻译服务", cls: "fingertip-settings-title"});
+		containerEl.createEl("h3", {text: "翻译服务", cls: "fingertip-settings-section-title"});
 
 		new Setting(containerEl)
 			.setName("翻译服务")
@@ -47,7 +51,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 				}));
 
 		// ========== 触发方式 ==========
-		// containerEl.createEl("h3", {text: "触发方式", cls: "fingertip-settings-title"});
+		containerEl.createEl("h3", {text: "触发方式", cls: "fingertip-settings-section-title"});
 
 		new Setting(containerEl)
 			.setName("划词触发方式")
@@ -62,7 +66,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 				}));
 
 		// ========== 发音设置 ==========
-		// containerEl.createEl("h3", {text: "发音设置", cls: "fingertip-settings-title"});
+		containerEl.createEl("h2", {text: "发音设置", cls: "fingertip-settings-section-title"});
 
 		new Setting(containerEl)
 			.setName("发音来源")
@@ -95,6 +99,31 @@ export class TranslationSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.accent)
 				.onChange(async (value) => {
 					this.plugin.settings.accent = value as "us" | "uk";
+					await this.plugin.saveSettings();
+				}));
+
+		// ========== 音标设置 ==========
+		containerEl.createEl("h3", {text: "音标设置", cls: "fingertip-settings-section-title"});
+
+		new Setting(containerEl)
+			.setName("显示音标")
+			.setDesc("是否在翻译结果中显示音标")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showPhonetic)
+				.onChange(async (value) => {
+					this.plugin.settings.showPhonetic = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("音标显示模式")
+			.setDesc("选择显示单个口音还是同时显示美式和英式音标")
+			.addDropdown(dropdown => dropdown
+				.addOption("single", "跟随发音口音设置")
+				.addOption("both", "同时显示美式和英式")
+				.setValue(this.plugin.settings.phoneticMode)
+				.onChange(async (value) => {
+					this.plugin.settings.phoneticMode = value as "single" | "both";
 					await this.plugin.saveSettings();
 				}));
 	}
