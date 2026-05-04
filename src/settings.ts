@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: TranslationPluginSettings = {
 	autoPlayTTS: false,
 	accent: "us",
 	triggerMode: "ctrl",
-	translationService: "bing",
+	translationService: "youdao",
 	ttsService: "youdao",
 	showPhonetic: true,
 	phoneticMode: "both"
@@ -42,9 +42,9 @@ export class TranslationSettingTab extends PluginSettingTab {
 			.setName("翻译服务")
 			.setDesc("选择翻译服务提供商")
 			.addDropdown(dropdown => dropdown
-                .addOption("bing", "Bing 词典 (免费，无限次)")
+                .addOption("youdao", "有道词典 (免费，无限次) (推荐)")
+				.addOption("bing", "Bing 词典 (免费，无限次)")
 				.addOption("mymemory", "MyMemory (免费，每天 1000 次)")
-				.addOption("youdao", "有道词典 (免费，无限次)")
 				.setValue(this.plugin.settings.translationService)
 				.onChange(async (value) => {
 					this.plugin.settings.translationService = value as "mymemory" | "bing" | "youdao";

@@ -15,6 +15,7 @@ export interface TranslationResult {
 	};
 	speakUrl?: string;
 	error?: string;
+	category?: string;
 }
 
 /**
@@ -98,12 +99,12 @@ export async function translate(
 			// 音标格式可能是 [...] 或 /.../
 			if (dataRel.includes("type=1") || labelText.includes("英")) {
 				if (phoneticText.includes("[") || phoneticText.includes("/")) {
-					phonetics.uk = phoneticText;
+					phonetics.uk = "英 " + phoneticText;
 				}
 			}
 			if (dataRel.includes("type=2") || labelText.includes("美")) {
 				if (phoneticText.includes("[") || phoneticText.includes("/")) {
-					phonetics.us = phoneticText;
+					phonetics.us = "美 " + phoneticText;
 				}
 			}
 		}
@@ -116,10 +117,10 @@ export async function translate(
 			const usMatch = html.match(/美[^<]*?<span[^>]*class="phonetic"[^>]*>([^<]+)<\/span>/);
 
 			if (ukMatch && ukMatch[1] && !phonetics.uk) {
-				phonetics.uk = ukMatch[1].trim();
+				phonetics.uk = "英 " + ukMatch[1].trim();
 			}
 			if (usMatch && usMatch[1] && !phonetics.us) {
-				phonetics.us = usMatch[1].trim();
+				phonetics.us = "美 " + usMatch[1].trim();
 			}
 		}
 
@@ -170,12 +171,63 @@ export async function translate(
 			return {translation: "", error: "未找到释义"};
 		}
 
+		// ========== 3. 解析单词类别（如 CET-4、CET-6、TOEFL 等） ==========
+
+		// 有道词典可能包含多个类别，需要全部收集
+		const categories: string[] = [];
+
+		// 方法1：查找所有 .rank 元素（支持 class="via rank" 这种多个 class 的情况）
+		const rankEls = doc.querySelectorAll(".rank");
+		for (const el of Array.from(rankEls)) {
+			// 类别可能在一个元素中用空格分隔，如 "CET4 TEM4"
+			const text = el.textContent?.trim() || "";
+			if (text) {
+				// 按空格拆分并过滤掉空字符串
+				const parts = text.split(/\s+/).filter(p => p);
+				categories.push(...parts);
+			}
+		}
+
+		// 方法2：如果没找到，尝试从页面 HTML 中直接提取
+		if (categories.length === 0) {
+			const html = response.text;
+			// 匹配 class="rank" 或 class="via rank" 等模式
+			const rankMatches = html.match(/class="(?:via )?rank"[^>]*>([^<]+)</gi);
+			if (rankMatches) {
+				for (const match of rankMatches) {
+					const catMatch = match.match(/>([^<]+)</);
+					if (catMatch && catMatch[1]) {
+						// 按空格拆分
+						const parts = catMatch[1].trim().split(/\s+/).filter(p => p);
+						categories.push(...parts);
+					}
+				}
+			}
+		}
+
+		// 方法3：尝试通过 [class*='rank'] 属性查找
+		if (categories.length === 0) {
+			const rankAttrEls = doc.querySelectorAll("[class*='rank']");
+			for (const el of Array.from(rankAttrEls)) {
+				const text = el.textContent?.trim() || "";
+				if (text) {
+					const parts = text.split(/\s+/).filter(p => p);
+					categories.push(...parts);
+				}
+			}
+		}
+
+		// 去重并构建类别字符串
+		const uniqueCategories = [...new Set(categories)];
+		const category = uniqueCategories.length > 0 ? uniqueCategories.join(" ") : undefined;
+
 		// 构建翻译文本
 		const textParts = meanings.map(m => `${m.pos} ${m.def}`);
 		return {
 			translation: textParts.join("  "),
 			meanings: meanings,
-			phonetics: Object.keys(phonetics).length > 0 ? phonetics : undefined
+			phonetics: Object.keys(phonetics).length > 0 ? phonetics : undefined,
+			category: category
 		};
 	} catch (error) {
 		return {
