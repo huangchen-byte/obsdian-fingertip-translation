@@ -5,7 +5,7 @@ export interface TranslationPluginSettings {
 	autoPlayTTS: boolean;
 	accent: "us" | "uk";
 	triggerMode: "ctrl" | "auto";
-	translationService: "mymemory" | "bing";
+	translationService: "mymemory" | "bing" | "youdao";
 	ttsService: "youdao" | "browser";
 	showPhonetic: boolean;
 	phoneticMode: "single" | "both";
@@ -44,9 +44,10 @@ export class TranslationSettingTab extends PluginSettingTab {
 			.addDropdown(dropdown => dropdown
                 .addOption("bing", "Bing 词典 (免费，无限次)")
 				.addOption("mymemory", "MyMemory (免费，每天 1000 次)")
+				.addOption("youdao", "有道词典 (免费，无限次)")
 				.setValue(this.plugin.settings.translationService)
 				.onChange(async (value) => {
-					this.plugin.settings.translationService = value as "mymemory" | "bing";
+					this.plugin.settings.translationService = value as "mymemory" | "bing" | "youdao";
 					await this.plugin.saveSettings();
 				}));
 

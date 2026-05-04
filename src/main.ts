@@ -2,6 +2,7 @@ import {App, Plugin, PluginSettingTab} from "obsidian";
 import {DEFAULT_SETTINGS, TranslationPluginSettings, TranslationSettingTab} from "./settings";
 import {translate as translateMymemory} from "./translator-mymemory";
 import {translate as translateBing} from "./translator-bing";
+import {translate as translateYoudao} from "./translator-youdao";
 import {speakSmart, speakWithBrowser, speakWithYoudao} from "./tts";
 
 export default class MyPlugin extends Plugin {
@@ -65,6 +66,8 @@ export default class MyPlugin extends Plugin {
 			let result;
 			if (this.settings.translationService === "bing") {
 				result = await translateBing(selectedText, "auto", "zh-CN");
+			} else if (this.settings.translationService === "youdao") {
+				result = await translateYoudao(selectedText, "auto", "zh-CN");
 			} else {
 				result = await translateMymemory(selectedText, "auto", "zh-CN");
 			}
