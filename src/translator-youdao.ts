@@ -1,7 +1,8 @@
 /**
  * 有道词典翻译
  *
- * 通过解析 dict.youdao.com 网页获取翻译
+ * 通过 dict.youdao.com/w/ 页面获取翻译数据
+ * 类别信息从页面 HTML 中提取
  */
 
 import {requestUrl} from "obsidian";
@@ -15,36 +16,22 @@ export interface TranslationResult {
 	};
 	speakUrl?: string;
 	error?: string;
-	category?: string;
-}
-
-/**
- * 清理文本 - 移除 [] 中的形态变化说明
- */
-function cleanDefinition(text: string): string {
-	// 移除 [复数 ...] 这样的形态变化说明
-	return text.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
+	categories?: string[];
 }
 
 /**
  * 提取词性和释义
- * 格式如: "int. 喂，你好（用于问候或打招呼）" 或 "vi. 默许"
  */
 function parseDefinition(text: string): {pos: string; def: string} | null {
-	// 匹配词性模式: vi. vt. n. v. adj. adv. int. pron. etc.
-	const match = text.match(/^(vi\.?|vt\.?|n\.?|v\.?|adj\.?|adv\.?|prep\.?|conj\.?|num\.?|pron\.?|art\.?|aux\.?|abbr\.?)\s+(.+)/i);
-
+	const match = text.match(/^(vi\.?|vt\.?|v\.?|n\.?|adj\.?|adv\.?|prep\.?|conj\.?|num\.?|pron\.?|art\.?|aux\.?|abbr\.?|linkword\.?)\s+(.+)/i);
 	if (match && match[1] && match[2]) {
-		return {
-			pos: match[1],
-			def: match[2].trim()
-		};
+		return {pos: match[1], def: match[2].trim()};
 	}
 	return null;
 }
 
 /**
- * 有道词典网页抓取
+ * 有道词典 API 调用
  */
 export async function translate(
 	text: string,
@@ -59,180 +46,115 @@ export async function translate(
 		return {translation: "", error: "文本过长"};
 	}
 
-	const url = `https://dict.youdao.com/w/${encodeURIComponent(text.toLowerCase())}/`;
+	const word = text.toLowerCase().trim();
+	const meanings: Array<{pos: string; def: string}> = [];
+	const phonetics: {us?: string; uk?: string} = {};
+	let categories: string[] = [];
 
-	try {
-		const response = await requestUrl({
-			url,
-			method: "GET",
-			headers: {
-				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-				"Accept": "text/html",
-				"Accept-Language": "zh-CN,zh;q=0.9"
-			},
-			throw: false
-		});
+	// 请求搜索页面（新版有道使用 /w/ 路径返回静态 HTML）
+	const response = await requestUrl({
+		url: `https://dict.youdao.com/w/${encodeURIComponent(word)}`,
+		method: "GET",
+		headers: {
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+			"Accept": "text/html",
+			"Referer": "https://dict.youdao.com"
+		},
+		throw: false
+	});
 
-		if (response.status !== 200) {
-			return {translation: "", error: `网络错误: ${response.status}`};
-		}
+	if (response.status !== 200) {
+		return {translation: "", error: `网络错误: ${response.status}`};
+	}
 
-		const doc = new DOMParser().parseFromString(response.text, "text/html");
-		const meanings: Array<{pos: string; def: string}> = [];
-		const phonetics: {us?: string; uk?: string} = {};
+	const pageDoc = new DOMParser().parseFromString(response.text, "text/html");
 
-		// ========== 1. 解析音标 ==========
-
-		// 查找所有 .pronounce 容器（包含音标和发音链接）
-		const pronounceEls = doc.querySelectorAll(".pronounce");
-		for (const el of Array.from(pronounceEls)) {
-			const label = el.querySelector(":scope > span:not(.phonetic)");
-			const phoneticEl = el.querySelector(".phonetic");
-			const audioLink = el.querySelector("a[data-rel]");
-
-			const labelText = label?.textContent?.trim() || "";
-			const phoneticText = phoneticEl?.textContent?.trim() || "";
-			const dataRel = audioLink?.getAttribute("data-rel") || "";
-
-			// 根据 label 文字或 data-rel 判断是英式还是美式
-			// data-rel 格式: "word&type=1" (英式) 或 "word&type=2" (美式)
-			// 音标格式可能是 [...] 或 /.../
-			if (dataRel.includes("type=1") || labelText.includes("英")) {
-				if (phoneticText.includes("[") || phoneticText.includes("/")) {
-					phonetics.uk = "英 " + phoneticText;
-				}
-			}
-			if (dataRel.includes("type=2") || labelText.includes("美")) {
-				if (phoneticText.includes("[") || phoneticText.includes("/")) {
-					phonetics.us = "美 " + phoneticText;
-				}
+	// ========== 1. 获取音标 ==========
+	// 新版页面：<span class="phonetic">[həˈləʊ]</span>
+	const phoneticEls = pageDoc.querySelectorAll(".phonetic");
+	phoneticEls.forEach((el, index) => {
+		const txt = el.textContent?.trim() || "";
+		if (txt) {
+			if (index === 0) {
+				phonetics.uk = txt;
+			} else if (index === 1) {
+				phonetics.us = txt;
 			}
 		}
+	});
 
-		// 如果还没找到，尝试从页面 HTML 中直接提取音标
-		if (!phonetics.uk || !phonetics.us) {
-			const html = response.text;
-			// 英式音标格式: [həˈləʊ] 或 /hɛˈləʊ/
-			const ukMatch = html.match(/英[^<]*?<span[^>]*class="phonetic"[^>]*>([^<]+)<\/span>/);
-			const usMatch = html.match(/美[^<]*?<span[^>]*class="phonetic"[^>]*>([^<]+)<\/span>/);
-
-			if (ukMatch && ukMatch[1] && !phonetics.uk) {
-				phonetics.uk = "英 " + ukMatch[1].trim();
-			}
-			if (usMatch && usMatch[1] && !phonetics.us) {
-				phonetics.us = "美 " + usMatch[1].trim();
-			}
+	// 备用：查找 usphone/ukphone 类
+	if (!phonetics.uk) {
+		const ukPhone = pageDoc.querySelector(".ukphone");
+		if (ukPhone?.textContent) {
+			phonetics.uk = ukPhone.textContent.trim();
 		}
+	}
+	if (!phonetics.us) {
+		const usPhone = pageDoc.querySelector(".usphone");
+		if (usPhone?.textContent) {
+			phonetics.us = usPhone.textContent.trim();
+		}
+	}
 
-		// ========== 2. 解析释义 ==========
-
-		// 主要释义在 #phrsListTab .trans-container ul li
-		const transContainer = doc.querySelector("#phrsListTab .trans-container ul");
-		if (transContainer) {
-			const lis = transContainer.querySelectorAll("li");
+	// ========== 2. 获取释义 ==========
+	// 释义在 #phrsListTab 的 ul > li 中
+	const phrsTab = pageDoc.querySelector("#phrsListTab");
+	if (phrsTab) {
+		const firstUl = phrsTab.querySelector("ul");
+		if (firstUl) {
+			const lis = firstUl.querySelectorAll(":scope > li");
 			for (const li of Array.from(lis)) {
 				const textContent = li.textContent?.trim() || "";
 
-				// 跳过包含 "复数" "过去式" 等的形态变化说明（这些在 [] 中）
-				if (textContent.includes("复数") || textContent.includes("过去式")) {
+				// 跳过形态变化说明
+				if (textContent.includes("复数") || textContent.includes("过去式") ||
+					textContent.includes("进行式") || textContent.includes("第三人称")) {
 					continue;
 				}
 
-				// 清理形态变化部分 [ ... ]
-				const cleanText = cleanDefinition(textContent);
+				// 移除 [复数 ...] 这样的形态变化说明
+				const cleanText = textContent.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
 
-				// 解析词性和释义
-				const parsed = parseDefinition(cleanText);
-				if (parsed) {
-					meanings.push(parsed);
-				}
-			}
-		}
-
-		// 如果主要释义为空，尝试其他区域
-		if (meanings.length === 0) {
-			// 尝试从柯林斯词典区域获取
-			const collinsItems = doc.querySelectorAll("#collinsResult .collinsMajorTrans p");
-			for (const p of Array.from(collinsItems)) {
-				const text = p.textContent?.trim() || "";
-				// 柯林斯格式包含中文翻译
-				if (text.length > 5 && /[一-龥]/.test(text)) {
-					// 尝试提取词性
-					const parsed = parseDefinition(text);
+				if (cleanText) {
+					const parsed = parseDefinition(cleanText);
 					if (parsed) {
 						meanings.push(parsed);
+					} else if (cleanText.length > 2) {
+						meanings.push({pos: "", def: cleanText});
 					}
 				}
 			}
 		}
+	}
 
-		// 最终检查
-		if (meanings.length === 0) {
-			return {translation: "", error: "未找到释义"};
-		}
-
-		// ========== 3. 解析单词类别（如 CET-4、CET-6、TOEFL 等） ==========
-
-		// 有道词典可能包含多个类别，需要全部收集
-		const categories: string[] = [];
-
-		// 方法1：查找所有 .rank 元素（支持 class="via rank" 这种多个 class 的情况）
-		const rankEls = doc.querySelectorAll(".rank");
-		for (const el of Array.from(rankEls)) {
-			// 类别可能在一个元素中用空格分隔，如 "CET4 TEM4"
-			const text = el.textContent?.trim() || "";
-			if (text) {
-				// 按空格拆分并过滤掉空字符串
-				const parts = text.split(/\s+/).filter(p => p);
+	// ========== 3. 获取类别（CET-4、TEM-4 等） ==========
+	const html = response.text;
+	const rankMatches = html.match(/class="(?:via )?rank"[^>]*>([^<]+)</gi);
+	if (rankMatches) {
+		for (const match of rankMatches) {
+			const catMatch = match.match(/>([^<]+)</);
+			if (catMatch && catMatch[1]) {
+				const parts = catMatch[1].trim().split(/\s+/).filter(p => p);
 				categories.push(...parts);
 			}
 		}
-
-		// 方法2：如果没找到，尝试从页面 HTML 中直接提取
-		if (categories.length === 0) {
-			const html = response.text;
-			// 匹配 class="rank" 或 class="via rank" 等模式
-			const rankMatches = html.match(/class="(?:via )?rank"[^>]*>([^<]+)</gi);
-			if (rankMatches) {
-				for (const match of rankMatches) {
-					const catMatch = match.match(/>([^<]+)</);
-					if (catMatch && catMatch[1]) {
-						// 按空格拆分
-						const parts = catMatch[1].trim().split(/\s+/).filter(p => p);
-						categories.push(...parts);
-					}
-				}
-			}
-		}
-
-		// 方法3：尝试通过 [class*='rank'] 属性查找
-		if (categories.length === 0) {
-			const rankAttrEls = doc.querySelectorAll("[class*='rank']");
-			for (const el of Array.from(rankAttrEls)) {
-				const text = el.textContent?.trim() || "";
-				if (text) {
-					const parts = text.split(/\s+/).filter(p => p);
-					categories.push(...parts);
-				}
-			}
-		}
-
-		// 去重并构建类别字符串
-		const uniqueCategories = [...new Set(categories)];
-		const category = uniqueCategories.length > 0 ? uniqueCategories.join(" ") : undefined;
-
-		// 构建翻译文本
-		const textParts = meanings.map(m => `${m.pos} ${m.def}`);
-		return {
-			translation: textParts.join("  "),
-			meanings: meanings,
-			phonetics: Object.keys(phonetics).length > 0 ? phonetics : undefined,
-			category: category
-		};
-	} catch (error) {
-		return {
-			translation: "",
-			error: `请求失败: ${error instanceof Error ? error.message : "未知错误"}`
-		};
 	}
+
+	// 去重类别
+	categories = [...new Set(categories)];
+
+	// 最终检查
+	if (meanings.length === 0) {
+		return {translation: "", error: "未找到释义"};
+	}
+
+	// 构建翻译文本
+	const textParts = meanings.map(m => `${m.pos} ${m.def}`).filter(t => t.trim());
+	return {
+		translation: textParts.join("  "),
+		meanings: meanings,
+		phonetics: Object.keys(phonetics).length > 0 ? phonetics : undefined,
+		categories: categories.length > 0 ? categories : undefined
+	};
 }

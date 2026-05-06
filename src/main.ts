@@ -63,7 +63,13 @@ export default class MyPlugin extends Plugin {
 			const rect = range.getBoundingClientRect();
 
 			// 根据设置选择翻译服务
-			let result;
+			let result: {
+				translation: string;
+				error?: string;
+				meanings?: Array<{pos: string; def: string}>;
+				phonetics?: {us?: string; uk?: string};
+				categories?: string[];
+			};
 			if (this.settings.translationService === "bing") {
 				result = await translateBing(selectedText, "auto", "zh-CN");
 			} else if (this.settings.translationService === "youdao") {
@@ -81,6 +87,9 @@ export default class MyPlugin extends Plugin {
 			// 获取音标数据
 			const phonetics = "phonetics" in result ? result.phonetics : undefined;
 
+			// 获取类别数据（CET-4、CET-6 等）
+			const categories = "categories" in result ? result.categories : undefined;
+
 			// 显示悬浮窗
 			this.showPopover({
 				text: result.translation || result.error || "翻译失败",
@@ -91,7 +100,8 @@ export default class MyPlugin extends Plugin {
 				x: rect.left + rect.width / 2,
 				y: rect.top,
 				meanings: meanings,
-				phonetics: phonetics
+				phonetics: phonetics,
+				categories: categories
 			});
 
 			// 自动发音（如果设置开启）
@@ -226,6 +236,7 @@ export default class MyPlugin extends Plugin {
 		y: number;
 		meanings?: Array<{pos: string; def: string}>;
 		phonetics?: {us?: string; uk?: string};
+		categories?: string[];
 	}) {
 		// 如果已存在，先移除
 		this.hidePopover();
@@ -366,6 +377,14 @@ export default class MyPlugin extends Plugin {
 			if (phoneticDiv.children.length > 0) {
 				popover.appendChild(phoneticDiv);
 			}
+		}
+
+		// 显示单词类别（CET-4、CET-6 等）- 在音标和翻译之间
+		if (options.categories && options.categories.length > 0) {
+			const categoryDiv = document.createElement("div");
+			categoryDiv.className = "popover-categories";
+			categoryDiv.textContent = options.categories.join(" · ");
+			popover.appendChild(categoryDiv);
 		}
 
 		// 翻译文本容器（用于拖拽）
