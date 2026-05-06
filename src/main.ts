@@ -380,7 +380,7 @@ export default class MyPlugin extends Plugin {
 		}
 
 		// 显示单词类别（CET-4、CET-6 等）- 在音标和翻译之间
-		if (options.categories && options.categories.length > 0) {
+		if (this.settings.showCategory && options.categories && options.categories.length > 0) {
 			const categoryDiv = document.createElement("div");
 			categoryDiv.className = "popover-categories";
 			categoryDiv.textContent = options.categories.join(" · ");

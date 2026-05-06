@@ -9,6 +9,7 @@ export interface TranslationPluginSettings {
 	ttsService: "youdao" | "browser";
 	showPhonetic: boolean;
 	phoneticMode: "single" | "both";
+	showCategory: boolean;
 }
 
 export const DEFAULT_SETTINGS: TranslationPluginSettings = {
@@ -18,7 +19,8 @@ export const DEFAULT_SETTINGS: TranslationPluginSettings = {
 	translationService: "youdao",
 	ttsService: "youdao",
 	showPhonetic: true,
-	phoneticMode: "both"
+	phoneticMode: "both",
+	showCategory: true
 };
 
 export class TranslationSettingTab extends PluginSettingTab {
@@ -125,6 +127,19 @@ export class TranslationSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.phoneticMode)
 				.onChange(async (value) => {
 					this.plugin.settings.phoneticMode = value as "single" | "both";
+					await this.plugin.saveSettings();
+				}));
+
+		// ========== 单词类别设置 ==========
+		containerEl.createEl("h3", {text: "单词类别设置", cls: "fingertip-settings-section-title"});
+
+		new Setting(containerEl)
+			.setName("显示单词类别")
+			.setDesc("是否显示 CET-4、CET-6、TOEFL 等单词类别")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showCategory)
+				.onChange(async (value) => {
+					this.plugin.settings.showCategory = value;
 					await this.plugin.saveSettings();
 				}));
 	}
