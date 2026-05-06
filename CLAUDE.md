@@ -16,8 +16,10 @@
 src/
 ├── main.ts                 # 插件主入口
 ├── settings.ts             # 设置界面
-├── tts.ts                 # 发音功能 (Web Speech API)
-└── translator-mymemory.ts  # MyMemory 翻译 API
+├── tts.ts                  # 发音功能 (Web Speech API)
+├── translator-mymemory.ts  # MyMemory 翻译 API
+├── translator-bing.ts      # Bing 词典翻译
+├── translator-youdao-integrated.ts # 有道词典(整合Plus+网页版)
 
 styles.css                 # 悬浮窗样式
 manifest.json             # 插件清单
@@ -35,6 +37,8 @@ esbuild.config.mjs        # 构建配置
 
 | 服务 | API | 词典格式 | 发音 | 备注 |
 |------|-----|---------|------|------|
+| Bing | `dict.bing.com` | ✅ 词性 | 浏览器 TTS | 免费，无限次 |
+| 有道词典 | `/jsonapi_s` + `/w/` 自动切换 | ✅ 柯林斯/真题/网页 | 有道音频 | 免费，无限次，自动fallback |
 | MyMemory | `/api.mymemory.translated.net/get` | ❌ | 浏览器 TTS | 免费，每天 1000 次 |
 
 ### CORS 解决方案

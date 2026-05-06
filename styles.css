@@ -14,6 +14,7 @@
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 	min-width: 0;
 	width: max-content;
+	max-width: 420px;
 	font-size: 13px;
 	line-height: 1.6;
 	display: flex;
@@ -90,6 +91,7 @@
 	flex-direction: column;
 	gap: 2px;
 	cursor: default;
+	max-width: 100%;
 }
 
 /* 翻译文本 */
@@ -97,12 +99,14 @@
 	color: var(--text-normal);
 	word-break: break-word;
 	line-height: 1.5;
+	max-width: 100%;
 }
 
 /* 词性样式 - 天蓝色 */
 .popover-translation .pos {
 	color: #5ba3c0;
 	font-style: normal;
+	font-weight: 500;
 }
 
 /* 翻译悬浮窗错误状态 */
@@ -153,10 +157,37 @@
 	gap: 4px;
 }
 
+/* 音标样式 - 斜体 [] 包起来 */
 .phonetic-text {
 	font-size: 12px;
 	color: var(--text-muted);
 	font-style: italic;
+}
+
+.phonetic-text::before {
+	content: "[";
+}
+
+.phonetic-text::after {
+	content: "]";
+}
+
+/* 美/英 标识 */
+.phonetic-accent {
+	font-size: 10px;
+	color: var(--text-faint);
+	font-style: normal;
+	margin-right: 2px;
+}
+
+/* 音标文本 - 普通样式（无斜体[]） */
+.phonetic-text.plain {
+	font-style: normal;
+}
+
+.phonetic-text.plain::before,
+.phonetic-text.plain::after {
+	content: none;
 }
 
 /* 音标行的小喇叭按钮 */
@@ -189,10 +220,53 @@
 
 /* 单词类别标签（CET-4、CET-6、TOEFL 等） */
 .popover-categories {
-	font-size: 11px;
-	color: var(--text-faint);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
 	padding: 2px 0;
+}
+
+/* 类别标签样式 - 胶囊形状 */
+.category-tag {
+	font-size: 10px;
+	padding: 1px 6px;
+	border-radius: 10px;
+	background: var(--interactive-normal);
+	color: var(--text-muted);
+	font-weight: 500;
 	letter-spacing: 0.02em;
+	white-space: nowrap;
+}
+
+/* 考试类型标签 - 用不同颜色区分 */
+.category-tag[data-level="中考"],
+.category-tag[data-level="高考"] {
+	background: rgba(91, 163, 192, 0.15);
+	color: #5ba3c0;
+}
+
+.category-tag[data-level="CET4"],
+.category-tag[data-level="CET6"] {
+	background: rgba(150, 120, 200, 0.15);
+	color: #9678c8;
+}
+
+.category-tag[data-level="TEM4"],
+.category-tag[data-level="TEM8"] {
+	background: rgba(200, 150, 100, 0.15);
+	color: #c89664;
+}
+
+.category-tag[data-level="IELTS"],
+.category-tag[data-level="TOEFL"],
+.category-tag[data-level="GRE"] {
+	background: rgba(220, 100, 100, 0.15);
+	color: #dc6464;
+}
+
+.category-tag[data-level="考研"] {
+	background: rgba(80, 160, 100, 0.15);
+	color: #50a064;
 }
 
 /* 设置页面分组标题样式 */

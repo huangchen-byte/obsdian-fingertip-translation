@@ -2,7 +2,7 @@ import {App, Plugin, PluginSettingTab} from "obsidian";
 import {DEFAULT_SETTINGS, TranslationPluginSettings, TranslationSettingTab} from "./settings";
 import {translate as translateMymemory} from "./translator-mymemory";
 import {translate as translateBing} from "./translator-bing";
-import {translate as translateYoudao} from "./translator-youdao";
+import {translate as translateYoudao} from "./translator-youdao-integrated";
 import {speakSmart, speakWithBrowser, speakWithYoudao} from "./tts";
 
 export default class MyPlugin extends Plugin {
@@ -69,6 +69,7 @@ export default class MyPlugin extends Plugin {
 				meanings?: Array<{pos: string; def: string}>;
 				phonetics?: {us?: string; uk?: string};
 				categories?: string[];
+				source?: "plus" | "webpage";
 			};
 			if (this.settings.translationService === "bing") {
 				result = await translateBing(selectedText, "auto", "zh-CN");
@@ -90,6 +91,9 @@ export default class MyPlugin extends Plugin {
 			// 获取类别数据（CET-4、CET-6 等）
 			const categories = "categories" in result ? result.categories : undefined;
 
+			// 获取数据来源（用于音标样式处理）
+			const source = "source" in result ? result.source : undefined;
+
 			// 显示悬浮窗
 			this.showPopover({
 				text: result.translation || result.error || "翻译失败",
@@ -101,7 +105,8 @@ export default class MyPlugin extends Plugin {
 				y: rect.top,
 				meanings: meanings,
 				phonetics: phonetics,
-				categories: categories
+				categories: categories,
+				phoneticSource: source
 			});
 
 			// 自动发音（如果设置开启）
@@ -237,6 +242,7 @@ export default class MyPlugin extends Plugin {
 		meanings?: Array<{pos: string; def: string}>;
 		phonetics?: {us?: string; uk?: string};
 		categories?: string[];
+		phoneticSource?: "plus" | "webpage";
 	}) {
 		// 如果已存在，先移除
 		this.hidePopover();
@@ -285,9 +291,15 @@ export default class MyPlugin extends Plugin {
 				const lineDiv = document.createElement("div");
 				lineDiv.className = "phonetic-line";
 
-				// 音标文本
+				// 美/英标识
+				const accentSpan = document.createElement("span");
+				accentSpan.className = "phonetic-accent";
+				accentSpan.textContent = accent === "us" ? "美" : "英";
+				lineDiv.appendChild(accentSpan);
+
+				// 音标文本 - webpage来源不需要斜体[]
 				const textSpan = document.createElement("span");
-				textSpan.className = "phonetic-text";
+				textSpan.className = options.phoneticSource === "webpage" ? "phonetic-text plain" : "phonetic-text";
 				textSpan.textContent = text;
 				lineDiv.appendChild(textSpan);
 
@@ -318,8 +330,13 @@ export default class MyPlugin extends Plugin {
 					const usContainer = document.createElement("span");
 					usContainer.className = "phonetic-item";
 
+					const usAccent = document.createElement("span");
+					usAccent.className = "phonetic-accent";
+					usAccent.textContent = "美";
+					usContainer.appendChild(usAccent);
+
 					const usText = document.createElement("span");
-					usText.className = "phonetic-text";
+					usText.className = options.phoneticSource === "webpage" ? "phonetic-text plain" : "phonetic-text";
 					usText.textContent = options.phonetics.us;
 					usContainer.appendChild(usText);
 
@@ -343,8 +360,13 @@ export default class MyPlugin extends Plugin {
 					const ukContainer = document.createElement("span");
 					ukContainer.className = "phonetic-item";
 
+					const ukAccent = document.createElement("span");
+					ukAccent.className = "phonetic-accent";
+					ukAccent.textContent = "英";
+					ukContainer.appendChild(ukAccent);
+
 					const ukText = document.createElement("span");
-					ukText.className = "phonetic-text";
+					ukText.className = options.phoneticSource === "webpage" ? "phonetic-text plain" : "phonetic-text";
 					ukText.textContent = options.phonetics.uk;
 					ukContainer.appendChild(ukText);
 
@@ -383,7 +405,13 @@ export default class MyPlugin extends Plugin {
 		if (this.settings.showCategory && options.categories && options.categories.length > 0) {
 			const categoryDiv = document.createElement("div");
 			categoryDiv.className = "popover-categories";
-			categoryDiv.textContent = options.categories.join(" · ");
+			for (const cat of options.categories) {
+				const tag = document.createElement("span");
+				tag.className = "category-tag";
+				tag.textContent = cat;
+				tag.dataset["level"] = cat;
+				categoryDiv.appendChild(tag);
+			}
 			popover.appendChild(categoryDiv);
 		}
 
