@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS: TranslationPluginSettings = {
 	autoPlayTTS: false,
 	accent: "us",
 	triggerMode: "ctrl",
-	translationService: "youdao",
+	translationService: "bing",
 	ttsService: "youdao",
 	showPhonetic: true,
 	phoneticMode: "both",
@@ -44,8 +44,8 @@ export class TranslationSettingTab extends PluginSettingTab {
 			.setName("翻译服务")
 			.setDesc("选择翻译服务提供商")
 			.addDropdown(dropdown => dropdown
-                .addOption("youdao", "有道词典 (免费，无限次) (推荐)")
-				.addOption("bing", "Bing 词典 (免费，无限次)")
+                .addOption("bing", "Bing 词典 (免费，无限次) (推荐)")
+                .addOption("youdao", "有道词典 (免费，无限次)")
 				.addOption("mymemory", "MyMemory (免费，每天 1000 次)")
 				.setValue(this.plugin.settings.translationService)
 				.onChange(async (value) => {
@@ -135,7 +135,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("显示单词类别")
-			.setDesc("是否显示 CET-4、CET-6、TOEFL 等单词类别")
+			.setDesc("是否显示 CET-4、CET-6、TOEFL 等单词类别(⚠️仅有道词典支持)")
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showCategory)
 				.onChange(async (value) => {
