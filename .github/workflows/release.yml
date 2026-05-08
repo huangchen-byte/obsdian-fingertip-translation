@@ -51,7 +51,7 @@ jobs:
       # 步骤1: 检出代码（完整历史）
       # ------------------------------------------------------------------------
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # 获取完整 Git 历史，用于生成 changelog
           # 因为需要访问 tag 之间的 commit 历史
@@ -61,7 +61,7 @@ jobs:
       # 步骤2: 设置 Node.js 24 环境
       # ------------------------------------------------------------------------
       - name: Setup Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 24           # 使用 Node.js 24（与本地开发环境保持一致）
           cache: 'npm'               # 缓存 npm 依赖加速构建
@@ -118,7 +118,7 @@ jobs:
       # ------------------------------------------------------------------------
       # 使用 softprops/action-gh-release action 创建正式 Release
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           # Release 正文内容
           body: |
