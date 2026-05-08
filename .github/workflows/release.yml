@@ -1,54 +1,130 @@
+# =============================================================================
+# 文件名: release.yml
+# 功能描述: 自动化发布流程 - 当推送 Git tag 时自动构建并创建 GitHub Release
+#
+# 触发条件:
+#   - 推送任意 Git tag 到远程仓库时触发
+#   - 使用 pattern: '*' 匹配所有 tag
+#
+# 主要功能:
+#   - 检出完整历史用于生成 changelog
+#   - 安装依赖并构建项目
+#   - 获取上一个 tag 用于计算变更内容
+#   - 自动生成 changelog（基于 commit 历史）
+#   - 使用 softprops/action-gh-release 创建 GitHub Release
+#   - 上传构建产物（main.js, manifest.json, styles.css）
+#
+# 依赖/要求:
+#   - Node.js 20
+#   - softprops/action-gh-release@v1
+#   - Git tag 命名规范（如：v1.0.0）
+# =============================================================================
+
 name: Release
 
+# ============================================================================
+# 触发条件 - 定义何时运行此工作流
+# ============================================================================
 on:
   push:
-    # 当推送形如 v1.0.0 的版本标签时触发
+    # 当推送任意 tag 时触发（* 是通配符）
+    # 推荐使用语义化版本号，如：v1.0.0, v1.2.3
     tags:
-      - 'v*'
-  release:
-    types: [published]
-
-permissions:
-  contents: write
+      - '*'
 
 jobs:
-  build-and-release:
+  release:
     runs-on: ubuntu-latest
 
+    # --------------------------------------------------------------------------
+    # 权限配置 - 需要写入权限来创建 Release
+    # --------------------------------------------------------------------------
+    permissions:
+      contents: write              # 写入仓库内容（创建 Release）
+
     steps:
+      # ------------------------------------------------------------------------
+      # 步骤1: 检出代码（完整历史）
+      # ------------------------------------------------------------------------
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # 获取完整 Git 历史，用于生成 changelog
+          # 因为需要访问 tag 之间的 commit 历史
+          fetch-depth: 0
 
-      - name: Setup Node.js
+      # ------------------------------------------------------------------------
+      # 步骤2: 设置 Node.js 20 环境
+      # ------------------------------------------------------------------------
+      - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20           # 使用 LTS 版本
+          cache: 'npm'               # 缓存 npm 依赖加速构建
 
+      # ------------------------------------------------------------------------
+      # 步骤3: 安装项目依赖
+      # ------------------------------------------------------------------------
       - name: Install dependencies
-        run: npm ci
+        run: npm ci                  # 使用 clean install 确保依赖版本一致
 
-      - name: Build plugin
-        run: npm run build
+      # ------------------------------------------------------------------------
+      # 步骤4: 构建项目
+      # ------------------------------------------------------------------------
+      - name: Build
+        run: npm run build           # 运行 esbuild 打包插件
 
-      - name: Create zip package
+      # ------------------------------------------------------------------------
+      # 步骤5: 获取前一个 tag
+      # ------------------------------------------------------------------------
+      # 计算从上一个 tag 到当前 tag 之间的所有 commit
+      - name: Get previous tag
+        id: prev_tag
         run: |
-          mkdir -p release
-          # 复制必要的文件
-          cp main.js release/
-          cp manifest.json release/
-          cp styles.css release/
-          cp -r src release/
+          # git describe --tags --abbrev=0 HEAD^ 获取前一个 tag
+          # HEAD^ 表示当前 commit 的父提交
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          # 输出到 GITHUB_OUTPUT，供后续步骤使用
+          echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
-          # 创建 zip 包（以版本号为文件名）
-          VERSION=${GITHUB_REF#refs/tags/v}
-          zip -r "fingertip-translation-${VERSION}.zip" main.js manifest.json styles.css src/
+      # ------------------------------------------------------------------------
+      # 步骤6: 生成 changelog
+      # ------------------------------------------------------------------------
+      # 从上一个 tag 到当前 tag 之间的所有 commit 作为变更日志
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # 如果存在上一个 tag，生成该区间内的 changelog
+          if [ -n "${{ steps.prev_tag.outputs.tag }}" ]; then
+            # git log 获取两个 tag 之间的 commit，格式化为 "- %s"
+            # --no-merges 排除 merge commit
+            # grep 排除当前 tag 名称（避免 commit message 就是 tag 名的情况）
+            CHANGELOG=$(git log ${{ steps.prev_tag.outputs.tag }}..HEAD --pretty=format:"- %s" --no-merges | grep -v "^- ${{ github.ref_name }}$" || true)
+          else
+            # 如果没有上一个 tag，生成最近 20 条 commit
+            CHANGELOG=$(git log --pretty=format:"- %s" --no-merges | head -20)
+          fi
+          # 将 changelog 写入 GITHUB_OUTPUT（使用 heredoc 格式支持多行）
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-          # 将 zip 移到 release 目录
-          mv "fingertip-translation-${VERSION}.zip" release/
-
-      - name: Upload Release asset
-        uses: softprops/action-gh-release@v2
+      # ------------------------------------------------------------------------
+      # 步骤7: 创建 GitHub Release
+      # ------------------------------------------------------------------------
+      # 使用 softprops/action-gh-release action 创建正式 Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          files: release/*.zip
-          generate_release_notes: true
+          # Release 正文内容
+          body: |
+            ## What's Changed
+            ${{ steps.changelog.outputs.notes }}
+
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.tag }}...${{ github.ref_name }}
+
+          # 需要上传到 Release 的文件（Obsidian 插件必需文件）
+          files: |
+            main.js              # 编译后的插件主文件
+            manifest.json        # 插件清单配置
+            styles.css           # 插件样式文件
