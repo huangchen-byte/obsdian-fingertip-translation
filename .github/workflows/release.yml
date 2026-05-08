@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    # 当推送形如 v1.0.0 的版本标签时触发
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Create zip package
+        run: |
+          mkdir -p release
+          # 复制必要的文件
+          cp main.js release/
+          cp manifest.json release/
+          cp styles.css release/
+          cp -r src release/
+
+          # 创建 zip 包（以版本号为文件名）
+          VERSION=${GITHUB_REF#refs/tags/v}
+          zip -r "fingertip-translation-${VERSION}.zip" main.js manifest.json styles.css src/
+
+          # 将 zip 移到 release 目录
+          mv "fingertip-translation-${VERSION}.zip" release/
+
+      - name: Upload Release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.zip
+          generate_release_notes: true
