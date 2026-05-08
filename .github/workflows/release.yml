@@ -129,6 +129,6 @@ jobs:
 
           # 需要上传到 Release 的文件（Obsidian 插件必需文件）
           files: |
-            main.js              # 编译后的插件主文件
-            manifest.json        # 插件清单配置
-            styles.css           # 插件样式文件
+            main.js
+            manifest.json
+            styles.css
