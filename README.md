@@ -1,5 +1,9 @@
 # Fingertip Translation - 划词翻译插件
 
+<div align="center">
+  <img src="docs/screenshot.png" alt="Fingertip Translation" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); max-width: 100%;">
+</div>
+
 一款简洁高效的 Obsidian 划词翻译插件，支持多种翻译服务、触发方式和自动发音。
 
 ## 功能特点
