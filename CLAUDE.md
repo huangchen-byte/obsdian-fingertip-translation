@@ -82,10 +82,11 @@ npm run typecheck  # TypeScript 类型检查
 
 - **当前版本**: 1.1.0
 - **最低兼容 Obsidian 版本**: 1.12.7
+- **标签命名**: Obsidian 插件标签**不带 `v` 前缀**（如 `1.1.0` 而非 `v1.1.0`）
 - **发布流程**:
   1. 更新 `manifest.json` 中的 `version`
   2. 更新 `versions.json` 添加新版本记录
-  3. 创建 Git tag (如 `v1.2.0`) 并推送
+  3. 创建 Git tag（**不带 `v` 前缀**，如 `1.1.0`）并推送
   4. GitHub Actions 自动构建并创建 Release
 
 ## GitHub Actions 工作流
