@@ -7,12 +7,13 @@
 #   - 使用 pattern: '*' 匹配所有 tag
 #
 # 主要功能:
-#   - 检出完整历史用于生成 changelog
 #   - 安装依赖并构建项目
-#   - 获取上一个 tag 用于计算变更内容
-#   - 自动生成 changelog（基于 commit 历史）
 #   - 使用 softprops/action-gh-release 创建 GitHub Release
 #   - 上传构建产物（main.js, manifest.json, styles.css）
+#
+# 安全实践:
+#   - 使用精确的 commit SHA 而非版本标签（防止供应链攻击）
+#   - 支持 GitHub provenance attestation
 #
 # 依赖/要求:
 #   - Node.js 24.x
@@ -22,112 +23,86 @@
 
 name: Release
 
-# 强制 GitHub Actions 使用 Node.js 24（避免 Node.js 20 弃用警告）
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
-# ============================================================================
-# 触发条件 - 定义何时运行此工作流
-# ============================================================================
 on:
   push:
-    # 当推送任意 tag 时触发（* 是通配符）
-    # 推荐使用语义化版本号，如：1.0.0, 1.2.3（**不带 `v` 前缀**）
     tags:
       - '*'
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
 
-    # --------------------------------------------------------------------------
-    # 权限配置 - 需要写入权限来创建 Release
-    # --------------------------------------------------------------------------
     permissions:
-      contents: write              # 写入仓库内容（创建 Release）
+      contents: write
+      attestations: write
+      id-token: write
 
     steps:
       # ------------------------------------------------------------------------
-      # 步骤1: 检出代码（完整历史）
+      # 步骤1: 检出代码
       # ------------------------------------------------------------------------
       - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          # 获取完整 Git 历史，用于生成 changelog
-          # 因为需要访问 tag 之间的 commit 历史
-          fetch-depth: 0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       # ------------------------------------------------------------------------
       # 步骤2: 设置 Node.js 24 环境
       # ------------------------------------------------------------------------
-      - name: Setup Node 24
-        uses: actions/setup-node@v5
+      - name: Use Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: 24           # 使用 Node.js 24（与本地开发环境保持一致）
-          cache: 'npm'               # 缓存 npm 依赖加速构建
+          node-version: '24.x'
+          cache: npm
 
       # ------------------------------------------------------------------------
-      # 步骤3: 安装项目依赖
+      # 步骤3: 安装依赖并构建
       # ------------------------------------------------------------------------
-      - name: Install dependencies
-        run: npm ci                  # 使用 clean install 确保依赖版本一致
-
-      # ------------------------------------------------------------------------
-      # 步骤4: 构建项目
-      # ------------------------------------------------------------------------
-      - name: Build
-        run: npm run build           # 运行 esbuild 打包插件
-
-      # ------------------------------------------------------------------------
-      # 步骤5: 获取前一个 tag
-      # ------------------------------------------------------------------------
-      # 计算从上一个 tag 到当前 tag 之间的所有 commit
-      - name: Get previous tag
-        id: prev_tag
+      - name: Build plugin
         run: |
-          # git describe --tags --abbrev=0 HEAD^ 获取前一个 tag
-          # HEAD^ 表示当前 commit 的父提交
+          npm ci
+          npm run build
+
+      # ------------------------------------------------------------------------
+      # 步骤4: 生成 release notes
+      # ------------------------------------------------------------------------
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # 获取前一个 tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          # 输出到 GITHUB_OUTPUT，供后续步骤使用
-          echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
-      # ------------------------------------------------------------------------
-      # 步骤6: 生成 changelog
-      # ------------------------------------------------------------------------
-      # 从上一个 tag 到当前 tag 之间的所有 commit 作为变更日志
-      - name: Generate changelog
-        id: changelog
-        run: |
-          # 如果存在上一个 tag，生成该区间内的 changelog
-          if [ -n "${{ steps.prev_tag.outputs.tag }}" ]; then
-            # git log 获取两个 tag 之间的 commit，格式化为 "- %s"
-            # --no-merges 排除 merge commit
-            # grep 排除当前 tag 名称（避免 commit message 就是 tag 名的情况）
-            CHANGELOG=$(git log ${{ steps.prev_tag.outputs.tag }}..HEAD --pretty=format:"- %s" --no-merges | grep -v "^- ${{ github.ref_name }}$" || true)
+          # 生成 changelog
+          if [ -n "$PREV_TAG" ]; then
+            CHANGELOG=$(git log $PREV_TAG..HEAD --pretty=format:"- %s" --no-merges | grep -v "^- ${{ github.ref_name }}" || true)
           else
-            # 如果没有上一个 tag，生成最近 20 条 commit
             CHANGELOG=$(git log --pretty=format:"- %s" --no-merges | head -20)
           fi
-          # 将 changelog 写入 GITHUB_OUTPUT（使用 heredoc 格式支持多行）
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+
+          # 写入文件
+          cat << 'RELEASENOTES' > release-notes.md
+## What's Changed
+$CHANGELOG
+
+**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...${{ github.ref_name }}
+RELEASENOTES
 
       # ------------------------------------------------------------------------
-      # 步骤7: 创建 GitHub Release
+      # 步骤5: Attest release assets
       # ------------------------------------------------------------------------
-      # 使用 softprops/action-gh-release action 创建正式 Release
-      - name: Create GitHub Release
+      - name: Attest release assets
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
+      # ------------------------------------------------------------------------
+      # 步骤6: 创建 GitHub Release
+      # ------------------------------------------------------------------------
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          # Release 正文内容
-          body: |
-            ## What's Changed
-            ${{ steps.changelog.outputs.notes }}
-
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.tag }}...${{ github.ref_name }}
-
-          # 需要上传到 Release 的文件（Obsidian 插件必需文件）
+          body_path: release-notes.md
           files: |
             main.js
             manifest.json
