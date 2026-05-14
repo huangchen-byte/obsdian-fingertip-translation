@@ -81,11 +81,11 @@ jobs:
 
           # 写入文件（不使用引号，让变量展开）
           cat << RELEASENOTES > release-notes.md
-## What's Changed
-${CHANGELOG}
+          # What's Changed
+          ${CHANGELOG}
 
-**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ github.ref_name }}
-RELEASENOTES
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ github.ref_name }}
+          RELEASENOTES
 
       # ------------------------------------------------------------------------
       # 步骤5: Attest release assets
