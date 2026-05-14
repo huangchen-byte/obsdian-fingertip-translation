@@ -34,7 +34,6 @@ export default class FingertipTranslationPlugin extends Plugin {
 	 * 注意：activeLeaf 已弃用，但仍是获取弹出窗口文档的推荐方式
 	 */
 	private getActiveDocument(): Document {
-		// activeLeaf 已弃用但无官方替代方案获取弹出窗口文档
 		const view = this.app.workspace.activeLeaf?.view;
 		// @ts-expect-error - doc 是 Obsidian 内部 API，不在公开 TypeScript 定义中
 		const doc = view?.doc as Document | undefined;
