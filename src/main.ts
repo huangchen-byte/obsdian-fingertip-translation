@@ -8,13 +8,13 @@ import {speakSmart, speakWithBrowser} from "./tts";
 /**
  * 创建 SVG 图标元素
  */
-function createSvgIcon(d: string, width = 16, height = 16): SVGElement {
-	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+function createSvgIcon(d: string, width = 16, height = 16, doc: Document = globalThis.document): SVGElement {
+	const svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttribute("viewBox", "0 0 24 24");
 	svg.setAttribute("width", String(width));
 	svg.setAttribute("height", String(height));
 	svg.setAttribute("fill", "currentColor");
-	const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+	const path = doc.createElementNS("http://www.w3.org/2000/svg", "path");
 	path.setAttribute("d", d);
 	svg.appendChild(path);
 	return svg;
@@ -28,12 +28,15 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 	/**
 	 * 获取活动文档，兼容弹出窗口
+	 * 用于在 Obsidian 的弹出窗口（如模态框、浮动面板）中正确获取 document 对象
+	 * 注意：activeLeaf 已弃用，但仍是获取弹出窗口文档的推荐方式
 	 */
 	private getActiveDocument(): Document {
-		// eslint-disable-next-line @typescript-eslint/no-deprecated
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- activeLeaf 已弃用但无官方替代方案获取弹出窗口文档
 		const view = this.app.workspace.activeLeaf?.view;
-		// @ts-ignore - doc property exists at runtime
-		return (view?.doc as Document) ?? document;
+		// @ts-expect-error - doc 是 Obsidian 内部 API，不在公开 TypeScript 定义中
+		const doc = view?.doc as Document | undefined;
+		return doc ?? globalThis.document;
 	}
 
 	async onload() {
@@ -310,7 +313,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 		if (showMainTts) {
 			const ttsBtn = doc.createElement("button");
 			ttsBtn.className = "fingertip-translation-tts";
-			ttsBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 16, 16));
+			ttsBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 16, 16, doc));
 			ttsBtn.title = "点击发音";
 			ttsBtn.onclick = (e) => {
 				e.stopPropagation();
@@ -345,7 +348,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 				// 喇叭按钮
 				const ttsBtn = doc.createElement("button");
 				ttsBtn.className = "fingertip-translation-tts phonetic-tts";
-				ttsBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14));
+				ttsBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14, doc));
 				ttsBtn.title = `点击播放${accent === "us" ? "美" : "英"}式发音`;
 				ttsBtn.onclick = (e) => {
 					e.stopPropagation();
@@ -381,7 +384,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 					const usBtn = doc.createElement("button");
 					usBtn.className = "fingertip-translation-tts phonetic-tts";
-					usBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14));
+					usBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14, doc));
 					usBtn.title = "点击播放美式发音";
 					usBtn.onclick = (e) => {
 						e.stopPropagation();
@@ -411,7 +414,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 					const ukBtn = doc.createElement("button");
 					ukBtn.className = "fingertip-translation-tts phonetic-tts";
-					ukBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14));
+					ukBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14, doc));
 					ukBtn.title = "点击播放英式发音";
 					ukBtn.onclick = (e) => {
 						e.stopPropagation();
