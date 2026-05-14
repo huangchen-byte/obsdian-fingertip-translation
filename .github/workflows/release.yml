@@ -77,12 +77,12 @@ jobs:
             CHANGELOG=$(git log --pretty=format:"- %s" --no-merges | head -20)
           fi
 
-          # 写入文件
-          cat << 'RELEASENOTES' > release-notes.md
+          # 写入文件（不使用引号，让变量展开）
+          cat << RELEASENOTES > release-notes.md
 ## What's Changed
-$CHANGELOG
+${CHANGELOG}
 
-**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...${{ github.ref_name }}
+**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ github.ref_name }}
 RELEASENOTES
 
       # ------------------------------------------------------------------------
