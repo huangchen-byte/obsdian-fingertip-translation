@@ -513,7 +513,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 		});
 
 		// 点击其他地方关闭
-		setTimeout(() => {
+		window.setTimeout(() => {
 			const clickOutsideHandler = (e: MouseEvent) => {
 				if (this.popover && !this.popover.contains(e.target as Node)) {
 					this.hidePopover();
