@@ -30,14 +30,10 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 	/**
 	 * 获取活动文档，兼容弹出窗口
-	 * 用于在 Obsidian 的弹出窗口（如模态框、浮动面板）中正确获取 document 对象
-	 * 注意：activeLeaf 已弃用，但仍是获取弹出窗口文档的推荐方式
+	 * 使用 Obsidian 提供的 activeDocument API 获取跨窗口兼容的 document 对象
 	 */
 	private getActiveDocument(): Document {
-		const view = this.app.workspace.activeLeaf?.view;
-		// @ts-expect-error - doc 是 Obsidian 内部 API，不在公开 TypeScript 定义中
-		const doc = view?.doc as Document | undefined;
-		return doc ?? (activeDocument ?? globalThis.document);
+		return activeDocument ?? globalThis.document;
 	}
 
 	async onload() {
