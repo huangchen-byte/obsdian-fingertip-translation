@@ -1,19 +1,25 @@
-# Fingertip Translation - 划词翻译插件
+# Fingertip Translation
 
-一款简洁高效的 Obsidian 划词翻译插件，支持多种翻译服务、触发方式和自动发音。
+<div align="center">
+  <img src="docs/screenshot.png" alt="Fingertip Translation" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); max-width: 100%;">
+</div>
 
-## 功能特点
+[中文文档](docs/README_zh.md)
 
-- **划词翻译** - 按住 Ctrl 键并划选文本即可翻译，也可选择直接划选
-- **多种翻译服务** - 支持 Bing 词典、有道词典（自动切换 Plus/网页版）、MyMemory
-- **词典格式支持** - Bing/有道显示词性和考试类别（ CET-4、CET-6 等）
-- **自动发音** - 翻译成功后自动播放发音（可开关）
-- **多发音口音** - 支持美式英语 (US) 和英式英语 (UK)
-- **轻量简洁** - 无需配置 API Key，开箱即用
+A simple and efficient text translation plugin for Obsidian that supports multiple translation services, trigger modes, and automatic pronunciation.
 
-## 安装
+## Features
 
-### 方法一：从头开发
+- **Selection Translation** - Hold Ctrl and select text to translate, or use direct selection
+- **Multiple Translation Services** - Supports Bing Dictionary, Youdao (automatic Plus/Webpage switching), MyMemory
+- **Dictionary Format** - Bing/Youdao display part of speech and exam categories (CET-4, CET-6, etc.)
+- **Auto Pronunciation** - Automatically plays pronunciation after successful translation (toggleable)
+- **Multiple Accents** - Supports US English and UK English
+- **Lightweight** - No API Key required, works out of the box
+
+## Installation
+
+### Method 1: Development Setup
 
 ```bash
 git clone <repo-url>
@@ -22,83 +28,83 @@ npm install
 npm run dev
 ```
 
-### 方法二：手动安装
+### Method 2: Manual Installation
 
-1. 下载或克隆此仓库
-2. 运行 `npm run build` 编译
-3. 将 `main.js`、`styles.css`、`manifest.json` 复制到你的 vault 插件目录：
+1. Download or clone this repository
+2. Run `npm run build` to compile
+3. Copy `main.js`, `styles.css`, and `manifest.json` to your vault plugin folder:
    ```
    VaultFolder/.obsidian/plugins/fingertip-translation/
    ```
-4. 在 Obsidian 设置中启用插件
+4. Enable the plugin in Obsidian settings
 
-## 使用方法
+## Usage
 
-1. 在笔记中划选需要翻译的文本
-2. 悬浮窗将显示翻译结果（包含音标、词性、释义）
-3. 点击 🔊 按钮可手动发音
-4. 开启「自动发音」后，翻译成功会自动播放发音
-5. 拖拽悬浮窗可调整位置
-6. 按 ESC 或点击外部可关闭悬浮窗
+1. Select the text you want to translate in a note
+2. A popover will display the translation result (including phonetic symbols, part of speech, definitions)
+3. Click the speaker button to manually play pronunciation
+4. With "Auto Pronunciation" enabled, pronunciation plays automatically after successful translation
+5. Drag the popover to adjust its position
+6. Press ESC or click outside to close the popover
 
-## 设置选项
+## Settings
 
-| 选项 | 说明 | 默认值 |
-|------|------|--------|
-| 翻译服务 | Bing词典/有道词典/MyMemory | Bing 词典 |
-| 触发方式 | Ctrl+划选 / 直接划选 | Ctrl+划选 |
-| 发音来源 | 有道音频 / 浏览器TTS | 有道音频 |
-| 自动发音 | 翻译成功后自动播放 | 关闭 |
-| 发音口音 | 美式英语 / 英式英语 | 美式英语 |
-| 显示音标 | 是否显示音标 | 显示 |
-| 音标模式 | 跟随口音 / 同时显示美英 | 同时显示 |
-| 显示类别 | 显示 CET-4、CET-6 等类别 | 显示 |
+| Option | Description | Default |
+|--------|------------|---------|
+| Translation Service | Bing Dictionary / Youdao / MyMemory | Youdao |
+| Trigger Mode | Ctrl+Select / Direct Select | Ctrl+Select |
+| Pronunciation Source | Youdao Audio / Browser TTS | Youdao Audio |
+| Auto Pronunciation | Auto play after translation | Off |
+| Pronunciation Accent | US English / UK English | US English |
+| Show Phonetic | Display phonetic symbols | On |
+| Phonetic Mode | Single accent / Both US and UK | Both |
+| Show Category | Display CET-4, CET-6, etc. | On |
 
-## 技术栈
+## Tech Stack
 
-- **语言**: TypeScript
-- **打包**: esbuild
-- **API 调用**: Obsidian `requestUrl()` (绕过 CORS)
+- **Language**: TypeScript
+- **Bundler**: esbuild
+- **API**: Obsidian `requestUrl()` (bypasses CORS)
 
-## 项目结构
+## Project Structure
 
 ```
 src/
-├── main.ts                       # 插件主入口
-├── settings.ts                   # 设置界面
-├── tts.ts                        # 发音功能 (Web Speech API)
-├── translator-mymemory.ts        # MyMemory 翻译 API
-├── translator-bing.ts            # Bing 词典翻译
-└── translator-youdao-integrated.ts # 有道词典 (整合Plus+网页版)
+├── main.ts                       # Plugin main entry
+├── settings.ts                   # Settings interface
+├── tts.ts                        # Pronunciation (Web Speech API)
+├── translator-mymemory.ts        # MyMemory Translation API
+├── translator-bing.ts            # Bing Dictionary
+└── translator-youdao-integrated.ts # Youdao Dictionary (Integrated Plus + Webpage)
 
-styles.css                        # 悬浮窗样式
-manifest.json                     # 插件清单
+styles.css                        # Popover styles
+manifest.json                     # Plugin manifest
 ```
 
-## 翻译服务说明
+## Translation Services
 
-| 服务 | 免费额度 | API Key | 词典格式 | 备注 |
-|------|---------|---------|----------|------|
-| Bing 词典 | 无限次 | 不需要 | ✅ 词性 | 推荐 |
-| 有道词典 | 无限次 | 不需要 | ✅ 柯林斯/真题/类别 | 自动 fallback |
-| MyMemory | 每天 1000 次 | 不需要 | ❌ | - |
+| Service | Free Quota | API Key | Dictionary Format | Notes |
+|---------|------------|---------|-------------------|-------|
+| Bing Dictionary | Unlimited | Not needed | Part of speech | Recommended |
+| Youdao Dictionary | Unlimited | Not needed | Collins/Exam/Category | Auto fallback |
+| MyMemory | 1000/day | Not needed | None | - |
 
-**有道词典特性**：
-- 优先使用 Plus API（数据更丰富）
-- Plus API 返回错误匹配时自动切换到网页版
-- 支持显示考试类别标签（CET-4、CET-6、高考、雅思、托福等）
-- 音标显示美/英标识
+**Youdao Features**:
+- Prefers Plus API for richer data
+- Auto switches to webpage version when Plus API returns no match
+- Displays exam category tags (CET-4, CET-6, Gaokao, IELTS, TOEFL, etc.)
+- Shows US/UK accent labels for phonetics
 
-## 开发者指南
+## Developer Guide
 
 ```bash
-# 安装依赖
+# Install dependencies
 npm install
 
-# 开发模式（监听文件变化自动编译）
+# Development mode (watch for changes and auto-compile)
 npm run dev
 
-# 生产构建
+# Production build
 npm run build
 ```
 
@@ -106,9 +112,9 @@ npm run build
 
 BSD-0
 
-## 参考
+## References
 
-- [Obsidian 插件开发文档](https://docs.obsidian.md)
-- [有道词典 API](https://dict.youdao.com)
-- [Bing 词典](https://dict.bing.com)
-- [MyMemory 翻译 API](https://mymemory.translated.net/doc/spec.php)
+- [Obsidian Plugin Development Docs](https://docs.obsidian.md)
+- [Youdao Dictionary API](https://dict.youdao.com)
+- [Bing Dictionary](https://dict.bing.com)
+- [MyMemory Translation API](https://mymemory.translated.net/doc/spec.php)

@@ -58,11 +58,14 @@
 }
 
 /* 发音按钮 - 无边框，18px */
+button.fingertip-translation-tts {
+	background: none;
+	border: none;
+	outline: none;
+	box-shadow: none;
+}
+
 .fingertip-translation-tts {
-	background: none !important;
-	border: none !important;
-	outline: none !important;
-	box-shadow: none !important;
 	cursor: pointer;
 	padding: 0;
 	color: var(--text-muted);
@@ -72,9 +75,9 @@
 	transition: color 0.15s ease;
 }
 
-.fingertip-translation-tts svg {
-	width: 18px !important;
-	height: 18px !important;
+button.fingertip-translation-tts svg {
+	width: 18px;
+	height: 18px;
 }
 
 .fingertip-translation-tts:hover {
@@ -130,14 +133,6 @@
 	user-select: none;
 }
 
-/* 设置页面大标题样式 */
-.fingertip-settings-title {
-	font-size: 22px !important;
-	color: #000000 !important;
-	font-weight: 600 !important;
-	margin-top: 0 !important;
-}
-
 /* 音标样式 - 放在单词下一行 */
 .popover-phonetic {
 	display: flex;
@@ -191,11 +186,14 @@
 }
 
 /* 音标行的小喇叭按钮 */
+button.phonetic-tts {
+	background: none;
+	border: none;
+	outline: none;
+	box-shadow: none;
+}
+
 .phonetic-tts {
-	background: none !important;
-	border: none !important;
-	outline: none !important;
-	box-shadow: none !important;
 	cursor: pointer;
 	padding: 0;
 	color: var(--text-faint);
@@ -205,17 +203,9 @@
 	transition: color 0.15s ease;
 }
 
-.phonetic-tts:hover {
-	color: var(--text-muted);
-}
-
-.phonetic-tts:active {
-	color: var(--text-primary);
-}
-
-.phonetic-tts svg {
-	width: 14px !important;
-	height: 14px !important;
+button.phonetic-tts svg {
+	width: 14px;
+	height: 14px;
 }
 
 /* 单词类别标签（CET-4、CET-6、TOEFL 等） */
@@ -269,16 +259,12 @@
 	color: #50a064;
 }
 
-/* 设置页面分组标题样式 */
-.fingertip-settings-section-title {
-	font-size: 16px !important;
-	color: var(--text-normal) !important;
-	font-weight: 600 !important;
-	margin-top: 16px !important;
-	margin-bottom: 8px !important;
-}
-
 .fingertip-translation-error .popover-original,
 .fingertip-translation-error .popover-translation {
 	color: var(--text-error);
+}
+
+/* 拖拽状态样式 */
+.fingertip-translation-popover.popover-dragging {
+	cursor: grabbing;
 }

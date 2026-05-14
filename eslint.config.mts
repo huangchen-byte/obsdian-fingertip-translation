@@ -13,7 +13,8 @@ export default tseslint.config(
 				projectService: {
 					allowDefaultProject: [
 						'eslint.config.js',
-						'manifest.json'
+						'manifest.json',
+						'.claude/scripts/check-git-user.js'
 					]
 				},
 				tsconfigRootDir: import.meta.dirname,
@@ -22,6 +23,12 @@ export default tseslint.config(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		rules: {
+			// 禁用 sentence case 规则，因为插件 UI 是中文的
+			"obsidianmd/ui/sentence-case": "off",
+		},
+	},
 	globalIgnores([
 		"node_modules",
 		"dist",
@@ -30,5 +37,6 @@ export default tseslint.config(
 		"version-bump.mjs",
 		"versions.json",
 		"main.js",
+		".claude/**",
 	]),
 );

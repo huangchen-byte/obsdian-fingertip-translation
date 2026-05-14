@@ -6,6 +6,8 @@
  * 无需 API Key
  */
 
+import {requestUrl} from "obsidian";
+
 export interface MymemoryResponse {
 	responseStatus: number;  // 200 = 成功
 	responseData: {
@@ -99,15 +101,16 @@ export async function translate(
 	});
 
 	try {
-		const response = await fetch(
-			`https://api.mymemory.translated.net/get?${params.toString()}`
-		);
+		const response = await requestUrl({
+			url: `https://api.mymemory.translated.net/get?${params.toString()}`,
+			method: "GET"
+		});
 
-		if (!response.ok) {
+		if (response.status !== 200) {
 			return {translation: "", error: `网络错误: ${response.status}`};
 		}
 
-		const data: MymemoryResponse = await response.json();
+		const data = response.json as MymemoryResponse;
 
 		if (data.responseStatus !== 200) {
 			if (data.quotaFinished) {
