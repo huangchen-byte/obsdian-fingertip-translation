@@ -1,11 +1,26 @@
-import {App, Plugin, PluginSettingTab} from "obsidian";
+import {Plugin} from "obsidian";
 import {DEFAULT_SETTINGS, TranslationPluginSettings, TranslationSettingTab} from "./settings";
 import {translate as translateMymemory} from "./translator-mymemory";
 import {translate as translateBing} from "./translator-bing";
 import {translate as translateYoudao} from "./translator-youdao-integrated";
-import {speakSmart, speakWithBrowser, speakWithYoudao} from "./tts";
+import {speakSmart, speakWithBrowser} from "./tts";
 
-export default class MyPlugin extends Plugin {
+/**
+ * 创建 SVG 图标元素
+ */
+function createSvgIcon(d: string, width = 16, height = 16): SVGElement {
+	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	svg.setAttribute("viewBox", "0 0 24 24");
+	svg.setAttribute("width", String(width));
+	svg.setAttribute("height", String(height));
+	svg.setAttribute("fill", "currentColor");
+	const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+	path.setAttribute("d", d);
+	svg.appendChild(path);
+	return svg;
+}
+
+export default class FingertipTranslationPlugin extends Plugin {
 	settings: TranslationPluginSettings;
 	private popover: HTMLElement | null = null;
 	private mouseUpHandler: ((evt: MouseEvent) => void) | null = null;
@@ -39,7 +54,7 @@ export default class MyPlugin extends Plugin {
 
 	private registerTranslationEvents() {
 		// 鼠标释放事件 - 检测划选
-		this.mouseUpHandler = async (evt: MouseEvent) => {
+		this.mouseUpHandler = (evt: MouseEvent) => {
 			// 获取选中文本
 			const selection = window.getSelection();
 			const selectedText = selection?.toString().trim();
@@ -62,57 +77,8 @@ export default class MyPlugin extends Plugin {
 
 			const rect = range.getBoundingClientRect();
 
-			// 根据设置选择翻译服务
-			let result: {
-				translation: string;
-				error?: string;
-				meanings?: Array<{pos: string; def: string}>;
-				phonetics?: {us?: string; uk?: string};
-				categories?: string[];
-				source?: "plus" | "webpage";
-			};
-			if (this.settings.translationService === "bing") {
-				result = await translateBing(selectedText, "auto", "zh-CN");
-			} else if (this.settings.translationService === "youdao") {
-				result = await translateYoudao(selectedText, "auto", "zh-CN");
-			} else {
-				result = await translateMymemory(selectedText, "auto", "zh-CN");
-			}
-
-			// 检测源语言用于发音
-			const speakLang = /[一-龥]/.test(selectedText) ? "zh-CN" : "en";
-
-			// 获取 meanings 数据（用于 Bing 翻译的词性着色）
-			const meanings = "meanings" in result ? result.meanings : undefined;
-
-			// 获取音标数据
-			const phonetics = "phonetics" in result ? result.phonetics : undefined;
-
-			// 获取类别数据（CET-4、CET-6 等）
-			const categories = "categories" in result ? result.categories : undefined;
-
-			// 获取数据来源（用于音标样式处理）
-			const source = "source" in result ? result.source : undefined;
-
-			// 显示悬浮窗
-			this.showPopover({
-				text: result.translation || result.error || "翻译失败",
-				originalText: selectedText,
-				speakLang: speakLang,
-				accent: this.settings.accent,
-				hasError: !!result.error,
-				x: rect.left + rect.width / 2,
-				y: rect.top,
-				meanings: meanings,
-				phonetics: phonetics,
-				categories: categories,
-				phoneticSource: source
-			});
-
-			// 自动发音（如果设置开启）
-			if (this.settings.autoPlayTTS && !result.error) {
-				this.playTTS(selectedText);
-			}
+			// 翻译并显示结果
+			void this.translateAndShow(selectedText, rect);
 		};
 
 		// ESC 键关闭悬浮窗
@@ -136,6 +102,63 @@ export default class MyPlugin extends Plugin {
 			this.keyDownHandler = null;
 		}
 		this.hidePopover();
+	}
+
+	/**
+	 * 翻译并显示翻译结果
+	 */
+	private async translateAndShow(text: string, rect: DOMRect): Promise<void> {
+		// 根据设置选择翻译服务
+		let result: {
+			translation: string;
+			error?: string;
+			meanings?: Array<{pos: string; def: string}>;
+			phonetics?: {us?: string; uk?: string};
+			categories?: string[];
+			source?: "plus" | "webpage";
+		};
+		if (this.settings.translationService === "bing") {
+			result = await translateBing(text, "auto", "zh-CN");
+		} else if (this.settings.translationService === "youdao") {
+			result = await translateYoudao(text, "auto", "zh-CN");
+		} else {
+			result = await translateMymemory(text, "auto", "zh-CN");
+		}
+
+		// 检测源语言用于发音
+		const speakLang = /[一-龥]/.test(text) ? "zh-CN" : "en";
+
+		// 获取 meanings 数据（用于 Bing 翻译的词性着色）
+		const meanings = "meanings" in result ? result.meanings : undefined;
+
+		// 获取音标数据
+		const phonetics = "phonetics" in result ? result.phonetics : undefined;
+
+		// 获取类别数据（CET-4、CET-6 等）
+		const categories = "categories" in result ? result.categories : undefined;
+
+		// 获取数据来源（用于音标样式处理）
+		const source = "source" in result ? result.source : undefined;
+
+		// 显示悬浮窗
+		this.showPopover({
+			text: result.translation || result.error || "翻译失败",
+			originalText: text,
+			speakLang: speakLang,
+			accent: this.settings.accent,
+			hasError: !!result.error,
+			x: rect.left + rect.width / 2,
+			y: rect.top,
+			meanings: meanings,
+			phonetics: phonetics,
+			categories: categories,
+			phoneticSource: source
+		});
+
+		// 自动发音（如果设置开启）
+		if (this.settings.autoPlayTTS && !result.error) {
+			this.playTTS(text);
+		}
 	}
 
 	/**
@@ -203,7 +226,7 @@ export default class MyPlugin extends Plugin {
 			isDragging = false;
 			document.removeEventListener("pointermove", onPointerMove);
 			document.removeEventListener("pointerup", onPointerUp);
-			popup.style.cursor = "";
+			popup.classList.remove("popover-dragging");
 		};
 
 		// 在弹窗上按下开始拖动（排除按钮点击区域）
@@ -218,7 +241,7 @@ export default class MyPlugin extends Plugin {
 			startY = e.clientY;
 			initialLeft = popup.offsetLeft;
 			initialTop = popup.offsetTop;
-			popup.style.cursor = "grabbing";
+			popup.classList.add("popover-dragging");
 			document.addEventListener("pointermove", onPointerMove);
 			document.addEventListener("pointerup", onPointerUp);
 		});
@@ -271,7 +294,7 @@ export default class MyPlugin extends Plugin {
 		if (showMainTts) {
 			const ttsBtn = document.createElement("button");
 			ttsBtn.className = "fingertip-translation-tts";
-			ttsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+			ttsBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 16, 16));
 			ttsBtn.title = "点击发音";
 			ttsBtn.onclick = (e) => {
 				e.stopPropagation();
@@ -306,7 +329,7 @@ export default class MyPlugin extends Plugin {
 				// 喇叭按钮
 				const ttsBtn = document.createElement("button");
 				ttsBtn.className = "fingertip-translation-tts phonetic-tts";
-				ttsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+				ttsBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14));
 				ttsBtn.title = `点击播放${accent === "us" ? "美" : "英"}式发音`;
 				ttsBtn.onclick = (e) => {
 					e.stopPropagation();
@@ -342,7 +365,7 @@ export default class MyPlugin extends Plugin {
 
 					const usBtn = document.createElement("button");
 					usBtn.className = "fingertip-translation-tts phonetic-tts";
-					usBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+					usBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14));
 					usBtn.title = "点击播放美式发音";
 					usBtn.onclick = (e) => {
 						e.stopPropagation();
@@ -372,7 +395,7 @@ export default class MyPlugin extends Plugin {
 
 					const ukBtn = document.createElement("button");
 					ukBtn.className = "fingertip-translation-tts phonetic-tts";
-					ukBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+					ukBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14));
 					ukBtn.title = "点击播放英式发音";
 					ukBtn.onclick = (e) => {
 						e.stopPropagation();

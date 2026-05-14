@@ -130,14 +130,6 @@
 	user-select: none;
 }
 
-/* 设置页面大标题样式 */
-.fingertip-settings-title {
-	font-size: 22px !important;
-	color: #000000 !important;
-	font-weight: 600 !important;
-	margin-top: 0 !important;
-}
-
 /* 音标样式 - 放在单词下一行 */
 .popover-phonetic {
 	display: flex;
@@ -269,16 +261,12 @@
 	color: #50a064;
 }
 
-/* 设置页面分组标题样式 */
-.fingertip-settings-section-title {
-	font-size: 16px !important;
-	color: var(--text-normal) !important;
-	font-weight: 600 !important;
-	margin-top: 16px !important;
-	margin-bottom: 8px !important;
-}
-
 .fingertip-translation-error .popover-original,
 .fingertip-translation-error .popover-translation {
 	color: var(--text-error);
+}
+
+/* 拖拽状态样式 */
+.popover-dragging {
+	cursor: grabbing !important;
 }

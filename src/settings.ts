@@ -1,5 +1,5 @@
 import {App, PluginSettingTab, Setting} from "obsidian";
-import MyPlugin from "./main";
+import FingertipTranslationPlugin from "./main";
 
 export interface TranslationPluginSettings {
 	autoPlayTTS: boolean;
@@ -24,9 +24,9 @@ export const DEFAULT_SETTINGS: TranslationPluginSettings = {
 };
 
 export class TranslationSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+	plugin: FingertipTranslationPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: FingertipTranslationPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -35,10 +35,10 @@ export class TranslationSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", {text: "翻译设置", cls: "fingertip-settings-title"});
+		new Setting(containerEl).setName("翻译设置").setHeading();
 
 		// ========== 翻译服务 ==========
-		containerEl.createEl("h3", {text: "翻译服务", cls: "fingertip-settings-section-title"});
+		new Setting(containerEl).setName("翻译服务").setHeading();
 
 		new Setting(containerEl)
 			.setName("翻译服务")
@@ -54,7 +54,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 				}));
 
 		// ========== 触发方式 ==========
-		containerEl.createEl("h3", {text: "触发方式", cls: "fingertip-settings-section-title"});
+		new Setting(containerEl).setName("触发方式").setHeading();
 
 		new Setting(containerEl)
 			.setName("划词触发方式")
@@ -69,7 +69,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 				}));
 
 		// ========== 发音设置 ==========
-		containerEl.createEl("h2", {text: "发音设置", cls: "fingertip-settings-section-title"});
+		new Setting(containerEl).setName("发音设置").setHeading();
 
 		new Setting(containerEl)
 			.setName("发音来源")
@@ -106,7 +106,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 				}));
 
 		// ========== 音标设置 ==========
-		containerEl.createEl("h3", {text: "音标设置", cls: "fingertip-settings-section-title"});
+		new Setting(containerEl).setName("音标设置").setHeading();
 
 		new Setting(containerEl)
 			.setName("显示音标")
@@ -131,7 +131,7 @@ export class TranslationSettingTab extends PluginSettingTab {
 				}));
 
 		// ========== 单词类别设置 ==========
-		containerEl.createEl("h3", {text: "单词类别设置", cls: "fingertip-settings-section-title"});
+		new Setting(containerEl).setName("单词类别设置").setHeading();
 
 		new Setting(containerEl)
 			.setName("显示单词类别")

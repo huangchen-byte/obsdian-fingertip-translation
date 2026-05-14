@@ -4,8 +4,6 @@
  * 也支持浏览器 Web Speech API 作为 fallback
  */
 
-import {requestUrl} from "obsidian";
-
 let currentAudio: HTMLAudioElement | null = null;
 
 /**
@@ -50,9 +48,9 @@ export function playAudio(url: string): void {
 	};
 
 	// 播放音频
-	currentAudio.play().catch((error) => {
-		console.error("播放音频失败:", error);
-		currentAudio = null;
+	currentAudio.play().catch(() => {
+		// 静默处理播放失败，fallback 到浏览器 TTS
+		speakWithBrowser(url);
 	});
 }
 
@@ -68,7 +66,7 @@ export function speakWithBrowser(text: string, accent: "us" | "uk" = "us"): void
 
 	// 检查浏览器是否支持 Web Speech API
 	if (!window.speechSynthesis) {
-		console.error("浏览器不支持 Web Speech API");
+		// 静默处理，浏览器不支持时直接返回
 		return;
 	}
 
@@ -110,8 +108,7 @@ export function speakSmart(word: string, accent: "us" | "uk" = "us"): void {
 
 	// 尝试播放有道音频
 	currentAudio.play().catch(() => {
-		// 有道失败，使用浏览器 TTS fallback
-		console.log("有道音频播放失败，使用浏览器 TTS");
+		// 有道失败，静默 fallback 到浏览器 TTS
 		speakWithBrowser(word, accent);
 	});
 
