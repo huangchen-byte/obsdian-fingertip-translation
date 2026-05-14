@@ -7,14 +7,16 @@ import {speakSmart, speakWithBrowser} from "./tts";
 
 /**
  * 创建 SVG 图标元素
+ * @param doc 可选，默认为 activeDocument（Obsidian 跨窗口兼容 API）
  */
-function createSvgIcon(d: string, width = 16, height = 16, doc: Document = globalThis.document): SVGElement {
-	const svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
+function createSvgIcon(d: string, width = 16, height = 16, doc?: Document): SVGElement {
+	const targetDoc = doc ?? (activeDocument ?? globalThis.document);
+	const svg = targetDoc.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttribute("viewBox", "0 0 24 24");
 	svg.setAttribute("width", String(width));
 	svg.setAttribute("height", String(height));
 	svg.setAttribute("fill", "currentColor");
-	const path = doc.createElementNS("http://www.w3.org/2000/svg", "path");
+	const path = targetDoc.createElementNS("http://www.w3.org/2000/svg", "path");
 	path.setAttribute("d", d);
 	svg.appendChild(path);
 	return svg;
@@ -32,11 +34,11 @@ export default class FingertipTranslationPlugin extends Plugin {
 	 * 注意：activeLeaf 已弃用，但仍是获取弹出窗口文档的推荐方式
 	 */
 	private getActiveDocument(): Document {
-		// eslint-disable-next-line @typescript-eslint/no-deprecated -- activeLeaf 已弃用但无官方替代方案获取弹出窗口文档
+		// activeLeaf 已弃用但无官方替代方案获取弹出窗口文档
 		const view = this.app.workspace.activeLeaf?.view;
 		// @ts-expect-error - doc 是 Obsidian 内部 API，不在公开 TypeScript 定义中
 		const doc = view?.doc as Document | undefined;
-		return doc ?? globalThis.document;
+		return doc ?? (activeDocument ?? globalThis.document);
 	}
 
 	async onload() {
