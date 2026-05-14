@@ -10,7 +10,7 @@ import {speakSmart, speakWithBrowser} from "./tts";
  * @param doc 可选，默认为 activeDocument（Obsidian 跨窗口兼容 API）
  */
 function createSvgIcon(d: string, width = 16, height = 16, doc?: Document): SVGElement {
-	const targetDoc = doc ?? (activeDocument ?? globalThis.document);
+	const targetDoc = doc ?? (activeDocument ?? activeWindow.document);
 	const svg = targetDoc.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttribute("viewBox", "0 0 24 24");
 	svg.setAttribute("width", String(width));
@@ -33,7 +33,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 	 * 使用 Obsidian 提供的 activeDocument API 获取跨窗口兼容的 document 对象
 	 */
 	private getActiveDocument(): Document {
-		return activeDocument ?? globalThis.document;
+		return activeDocument ?? activeWindow.document;
 	}
 
 	async onload() {
