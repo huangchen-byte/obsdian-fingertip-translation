@@ -21,12 +21,14 @@
 #   - Git tag 命名规范：**不带 `v` 前缀**（如：1.0.0）
 # =============================================================================
 
-name: Release
+name: Release Obsidian plugin
 
 on:
   push:
     tags:
       - '*'
+      
+permissions: read-all
 
 jobs:
   build:
