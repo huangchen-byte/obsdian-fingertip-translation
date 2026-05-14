@@ -58,11 +58,14 @@
 }
 
 /* 发音按钮 - 无边框，18px */
+button.fingertip-translation-tts {
+	background: none;
+	border: none;
+	outline: none;
+	box-shadow: none;
+}
+
 .fingertip-translation-tts {
-	background: none !important;
-	border: none !important;
-	outline: none !important;
-	box-shadow: none !important;
 	cursor: pointer;
 	padding: 0;
 	color: var(--text-muted);
@@ -72,9 +75,9 @@
 	transition: color 0.15s ease;
 }
 
-.fingertip-translation-tts svg {
-	width: 18px !important;
-	height: 18px !important;
+button.fingertip-translation-tts svg {
+	width: 18px;
+	height: 18px;
 }
 
 .fingertip-translation-tts:hover {
@@ -183,11 +186,14 @@
 }
 
 /* 音标行的小喇叭按钮 */
+button.phonetic-tts {
+	background: none;
+	border: none;
+	outline: none;
+	box-shadow: none;
+}
+
 .phonetic-tts {
-	background: none !important;
-	border: none !important;
-	outline: none !important;
-	box-shadow: none !important;
 	cursor: pointer;
 	padding: 0;
 	color: var(--text-faint);
@@ -197,17 +203,9 @@
 	transition: color 0.15s ease;
 }
 
-.phonetic-tts:hover {
-	color: var(--text-muted);
-}
-
-.phonetic-tts:active {
-	color: var(--text-primary);
-}
-
-.phonetic-tts svg {
-	width: 14px !important;
-	height: 14px !important;
+button.phonetic-tts svg {
+	width: 14px;
+	height: 14px;
 }
 
 /* 单词类别标签（CET-4、CET-6、TOEFL 等） */
@@ -267,6 +265,6 @@
 }
 
 /* 拖拽状态样式 */
-.popover-dragging {
-	cursor: grabbing !important;
+.fingertip-translation-popover.popover-dragging {
+	cursor: grabbing;
 }

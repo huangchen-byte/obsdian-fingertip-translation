@@ -32,6 +32,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 	private getActiveDocument(): Document {
 		// eslint-disable-next-line @typescript-eslint/no-deprecated
 		const view = this.app.workspace.activeLeaf?.view;
+		// @ts-ignore - doc property exists at runtime
 		return (view?.doc as Document) ?? document;
 	}
 
@@ -495,7 +496,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 		this.makeDraggable(popover);
 
 		// 计算位置（显示在划选区域上方）
-		requestAnimationFrame(() => {
+		window.requestAnimationFrame(() => {
 			if (!this.popover) return;
 
 			const viewportWidth = window.innerWidth;
