@@ -26,6 +26,15 @@ export default class FingertipTranslationPlugin extends Plugin {
 	private mouseUpHandler: ((evt: MouseEvent) => void) | null = null;
 	private keyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
 
+	/**
+	 * 获取活动文档，兼容弹出窗口
+	 */
+	private getActiveDocument(): Document {
+		// eslint-disable-next-line @typescript-eslint/no-deprecated
+		const view = this.app.workspace.activeLeaf?.view;
+		return (view?.doc as Document) ?? document;
+	}
+
 	async onload() {
 		await this.loadSettings();
 
@@ -88,17 +97,19 @@ export default class FingertipTranslationPlugin extends Plugin {
 			}
 		};
 
-		document.addEventListener("mouseup", this.mouseUpHandler);
-		document.addEventListener("keydown", this.keyDownHandler);
+		const doc = this.getActiveDocument();
+		doc.addEventListener("mouseup", this.mouseUpHandler);
+		doc.addEventListener("keydown", this.keyDownHandler);
 	}
 
 	private unregisterTranslationEvents() {
+		const doc = this.getActiveDocument();
 		if (this.mouseUpHandler) {
-			document.removeEventListener("mouseup", this.mouseUpHandler);
+			doc.removeEventListener("mouseup", this.mouseUpHandler);
 			this.mouseUpHandler = null;
 		}
 		if (this.keyDownHandler) {
-			document.removeEventListener("keydown", this.keyDownHandler);
+			doc.removeEventListener("keydown", this.keyDownHandler);
 			this.keyDownHandler = null;
 		}
 		this.hidePopover();
@@ -222,10 +233,12 @@ export default class FingertipTranslationPlugin extends Plugin {
 			popup.style.top = `${initialTop + dy}px`;
 		};
 
+		const doc = this.getActiveDocument();
+
 		const onPointerUp = () => {
 			isDragging = false;
-			document.removeEventListener("pointermove", onPointerMove);
-			document.removeEventListener("pointerup", onPointerUp);
+			doc.removeEventListener("pointermove", onPointerMove);
+			doc.removeEventListener("pointerup", onPointerUp);
 			popup.classList.remove("popover-dragging");
 		};
 
@@ -242,8 +255,8 @@ export default class FingertipTranslationPlugin extends Plugin {
 			initialLeft = popup.offsetLeft;
 			initialTop = popup.offsetTop;
 			popup.classList.add("popover-dragging");
-			document.addEventListener("pointermove", onPointerMove);
-			document.addEventListener("pointerup", onPointerUp);
+			doc.addEventListener("pointermove", onPointerMove);
+			doc.addEventListener("pointerup", onPointerUp);
 		});
 
 		// 防止拖拽时选中文本
@@ -270,8 +283,10 @@ export default class FingertipTranslationPlugin extends Plugin {
 		// 如果已存在，先移除
 		this.hidePopover();
 
+		const doc = this.getActiveDocument();
+
 		// 创建悬浮窗
-		const popover = document.createElement("div");
+		const popover = doc.createElement("div");
 		popover.className = "fingertip-translation-popover";
 		if (options.hasError) {
 			popover.classList.add("fingertip-translation-error");
@@ -279,12 +294,12 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 		// 第一行：单词 + 发音按钮（如果开启显示音标则隐藏单词后面的小喇叭）
 		const showMainTts = options.originalText && options.speakLang && !this.settings.showPhonetic;
-		const headerDiv = document.createElement("div");
+		const headerDiv = doc.createElement("div");
 		headerDiv.className = "popover-header";
 
 		// 原文
 		if (options.originalText) {
-			const originalDiv = document.createElement("div");
+			const originalDiv = doc.createElement("div");
 			originalDiv.className = "popover-original";
 			originalDiv.textContent = options.originalText;
 			headerDiv.appendChild(originalDiv);
@@ -292,7 +307,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 		// 发音按钮（当不显示美英两个音标时显示）
 		if (showMainTts) {
-			const ttsBtn = document.createElement("button");
+			const ttsBtn = doc.createElement("button");
 			ttsBtn.className = "fingertip-translation-tts";
 			ttsBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 16, 16));
 			ttsBtn.title = "点击发音";
@@ -307,27 +322,27 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 		// 显示音标（第二行）
 		if (this.settings.showPhonetic && options.phonetics) {
-			const phoneticDiv = document.createElement("div");
+			const phoneticDiv = doc.createElement("div");
 			phoneticDiv.className = "popover-phonetic";
 
 			const createPhoneticLine = (text: string, accent: "us" | "uk") => {
-				const lineDiv = document.createElement("div");
+				const lineDiv = doc.createElement("div");
 				lineDiv.className = "phonetic-line";
 
 				// 美/英标识
-				const accentSpan = document.createElement("span");
+				const accentSpan = doc.createElement("span");
 				accentSpan.className = "phonetic-accent";
 				accentSpan.textContent = accent === "us" ? "美" : "英";
 				lineDiv.appendChild(accentSpan);
 
 				// 音标文本 - webpage来源不需要斜体[]
-				const textSpan = document.createElement("span");
+				const textSpan = doc.createElement("span");
 				textSpan.className = options.phoneticSource === "webpage" ? "phonetic-text plain" : "phonetic-text";
 				textSpan.textContent = text;
 				lineDiv.appendChild(textSpan);
 
 				// 喇叭按钮
-				const ttsBtn = document.createElement("button");
+				const ttsBtn = doc.createElement("button");
 				ttsBtn.className = "fingertip-translation-tts phonetic-tts";
 				ttsBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14));
 				ttsBtn.title = `点击播放${accent === "us" ? "美" : "英"}式发音`;
@@ -346,24 +361,24 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 			if (this.settings.phoneticMode === "both") {
 				// 同一行显示美式和英式音标
-				const lineDiv = document.createElement("div");
+				const lineDiv = doc.createElement("div");
 				lineDiv.className = "phonetic-line";
 
 				if (options.phonetics.us) {
-					const usContainer = document.createElement("span");
+					const usContainer = doc.createElement("span");
 					usContainer.className = "phonetic-item";
 
-					const usAccent = document.createElement("span");
+					const usAccent = doc.createElement("span");
 					usAccent.className = "phonetic-accent";
 					usAccent.textContent = "美";
 					usContainer.appendChild(usAccent);
 
-					const usText = document.createElement("span");
+					const usText = doc.createElement("span");
 					usText.className = options.phoneticSource === "webpage" ? "phonetic-text plain" : "phonetic-text";
 					usText.textContent = options.phonetics.us;
 					usContainer.appendChild(usText);
 
-					const usBtn = document.createElement("button");
+					const usBtn = doc.createElement("button");
 					usBtn.className = "fingertip-translation-tts phonetic-tts";
 					usBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14));
 					usBtn.title = "点击播放美式发音";
@@ -380,20 +395,20 @@ export default class FingertipTranslationPlugin extends Plugin {
 				}
 
 				if (options.phonetics.uk) {
-					const ukContainer = document.createElement("span");
+					const ukContainer = doc.createElement("span");
 					ukContainer.className = "phonetic-item";
 
-					const ukAccent = document.createElement("span");
+					const ukAccent = doc.createElement("span");
 					ukAccent.className = "phonetic-accent";
 					ukAccent.textContent = "英";
 					ukContainer.appendChild(ukAccent);
 
-					const ukText = document.createElement("span");
+					const ukText = doc.createElement("span");
 					ukText.className = options.phoneticSource === "webpage" ? "phonetic-text plain" : "phonetic-text";
 					ukText.textContent = options.phonetics.uk;
 					ukContainer.appendChild(ukText);
 
-					const ukBtn = document.createElement("button");
+					const ukBtn = doc.createElement("button");
 					ukBtn.className = "fingertip-translation-tts phonetic-tts";
 					ukBtn.appendChild(createSvgIcon("M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z", 14, 14));
 					ukBtn.title = "点击播放英式发音";
@@ -426,10 +441,10 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 		// 显示单词类别（CET-4、CET-6 等）- 在音标和翻译之间
 		if (this.settings.showCategory && options.categories && options.categories.length > 0) {
-			const categoryDiv = document.createElement("div");
+			const categoryDiv = doc.createElement("div");
 			categoryDiv.className = "popover-categories";
 			for (const cat of options.categories) {
-				const tag = document.createElement("span");
+				const tag = doc.createElement("span");
 				tag.className = "category-tag";
 				tag.textContent = cat;
 				tag.dataset["level"] = cat;
@@ -439,21 +454,21 @@ export default class FingertipTranslationPlugin extends Plugin {
 		}
 
 		// 翻译文本容器（用于拖拽）
-		const contentDiv = document.createElement("div");
+		const contentDiv = doc.createElement("div");
 		contentDiv.className = "popover-content";
 
 		// 翻译文本 - 如果有 meanings 数据，使用结构化渲染
 		if (options.meanings && options.meanings.length > 0) {
 			// Bing 词典的结构化数据，词性着色
 			options.meanings.forEach((m) => {
-				const transDiv = document.createElement("div");
+				const transDiv = doc.createElement("div");
 				transDiv.className = "popover-translation";
 				if (m.pos) {
-					const posSpan = document.createElement("span");
+					const posSpan = doc.createElement("span");
 					posSpan.className = "pos";
 					posSpan.textContent = m.pos + " ";
 					transDiv.appendChild(posSpan);
-					transDiv.appendChild(document.createTextNode(m.def));
+					transDiv.appendChild(doc.createTextNode(m.def));
 				} else {
 					transDiv.textContent = m.def;
 				}
@@ -463,7 +478,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 			// 普通翻译，按空格分割多个释义
 			const translations = options.text.split(/\s{2,}/);
 			translations.forEach((trans: string) => {
-				const transDiv = document.createElement("div");
+				const transDiv = doc.createElement("div");
 				transDiv.className = "popover-translation";
 				transDiv.textContent = trans.trim();
 				contentDiv.appendChild(transDiv);
@@ -473,7 +488,7 @@ export default class FingertipTranslationPlugin extends Plugin {
 		popover.appendChild(contentDiv);
 
 		// 添加到页面
-		document.body.appendChild(popover);
+		doc.body.appendChild(popover);
 		this.popover = popover;
 
 		// 使弹窗可拖拽
@@ -502,10 +517,10 @@ export default class FingertipTranslationPlugin extends Plugin {
 			const clickOutsideHandler = (e: MouseEvent) => {
 				if (this.popover && !this.popover.contains(e.target as Node)) {
 					this.hidePopover();
-					document.removeEventListener("mousedown", clickOutsideHandler);
+					doc.removeEventListener("mousedown", clickOutsideHandler);
 				}
 			};
-			document.addEventListener("mousedown", clickOutsideHandler);
+			doc.addEventListener("mousedown", clickOutsideHandler);
 		}, 10);
 	}
 
