@@ -1,9 +1,17 @@
-import {Plugin} from "obsidian";
+import {Menu, Notice, Plugin} from "obsidian";
 import {DEFAULT_SETTINGS, TranslationPluginSettings, TranslationSettingTab} from "./settings";
 import {translate as translateMymemory} from "./translator-mymemory";
 import {translate as translateBing} from "./translator-bing";
 import {translate as translateYoudao} from "./translator-youdao-integrated";
-import {speakSmart, speakWithBrowser} from "./tts";
+import {speakSmart, speakWithBrowser, stopAll} from "./tts";
+import {
+	canSaveVocabularyToWeave,
+	DEFAULT_VOCAB_DECK_NAME,
+	findExistingVocabularyTerm,
+	listVocabularyDeckChoices,
+	saveVocabularyCardToWeave,
+} from "./weave-bridge";
+import { createFingertipOfficialAPI, type FingertipOfficialAPI } from "./official-api";
 
 /**
  * 创建 SVG 图标元素
@@ -27,6 +35,23 @@ export default class FingertipTranslationPlugin extends Plugin {
 	private popover: HTMLElement | null = null;
 	private mouseUpHandler: ((evt: MouseEvent) => void) | null = null;
 	private keyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
+	/** 划词监听实际挂载的 document，卸载时必须对同一对象 remove */
+	private translationEventsDoc: Document | null = null;
+	private officialAPI: FingertipOfficialAPI | null = null;
+
+	/**
+	 * Third-party integration surface (Weave study UI, etc.).
+	 * Uninstalled / unloaded plugin → callers simply get no API.
+	 */
+	getOfficialAPI(): FingertipOfficialAPI {
+		if (!this.officialAPI) {
+			this.officialAPI = createFingertipOfficialAPI({
+				pluginVersion: this.manifest.version,
+				getSettings: () => this.settings,
+			});
+		}
+		return this.officialAPI;
+	}
 
 	/**
 	 * 获取活动文档，兼容弹出窗口
@@ -48,6 +73,8 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 	onunload() {
 		this.unregisterTranslationEvents();
+		stopAll();
+		this.officialAPI = null;
 	}
 
 	async loadSettings() {
@@ -99,20 +126,38 @@ export default class FingertipTranslationPlugin extends Plugin {
 		};
 
 		const doc = this.getActiveDocument();
+		this.translationEventsDoc = doc;
 		doc.addEventListener("mouseup", this.mouseUpHandler);
 		doc.addEventListener("keydown", this.keyDownHandler);
 	}
 
 	private unregisterTranslationEvents() {
-		const doc = this.getActiveDocument();
-		if (this.mouseUpHandler) {
-			doc.removeEventListener("mouseup", this.mouseUpHandler);
-			this.mouseUpHandler = null;
+		const docs = new Set<Document>();
+		if (this.translationEventsDoc) {
+			docs.add(this.translationEventsDoc);
 		}
-		if (this.keyDownHandler) {
-			doc.removeEventListener("keydown", this.keyDownHandler);
-			this.keyDownHandler = null;
+		try {
+			docs.add(this.getActiveDocument());
+		} catch {
+			/* ignore */
 		}
+		try {
+			docs.add(document);
+		} catch {
+			/* ignore */
+		}
+
+		for (const doc of docs) {
+			if (this.mouseUpHandler) {
+				doc.removeEventListener("mouseup", this.mouseUpHandler);
+			}
+			if (this.keyDownHandler) {
+				doc.removeEventListener("keydown", this.keyDownHandler);
+			}
+		}
+		this.mouseUpHandler = null;
+		this.keyDownHandler = null;
+		this.translationEventsDoc = null;
 		this.hidePopover();
 	}
 
@@ -488,6 +533,62 @@ export default class FingertipTranslationPlugin extends Plugin {
 
 		popover.appendChild(contentDiv);
 
+		// Weave 已启用且具备建卡能力时才显示「加入复习」，避免无用界面污染
+		if (
+			!options.hasError &&
+			options.originalText &&
+			canSaveVocabularyToWeave(this.app)
+		) {
+			const actionsDiv = doc.createElement("div");
+			actionsDiv.className = "popover-actions";
+
+			const deckBadge = doc.createElement("div");
+			deckBadge.className = "popover-weave-deck";
+			deckBadge.hidden = true;
+			actionsDiv.appendChild(deckBadge);
+
+			const saveBtn = doc.createElement("button");
+			saveBtn.className = "fingertip-weave-save-btn clickable-icon";
+			saveBtn.type = "button";
+			saveBtn.setAttribute("aria-label", "加入 Weave 复习");
+			saveBtn.title = "选择牌组后加入复习";
+			saveBtn.appendChild(
+				createSvgIcon(
+					"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z",
+					16,
+					16,
+					doc
+				)
+			);
+			const saveLabel = doc.createElement("span");
+			saveLabel.textContent = "加入复习";
+			saveBtn.appendChild(saveLabel);
+
+			const termForLookup = String(options.originalText || "").trim();
+			void findExistingVocabularyTerm(this.app, termForLookup).then((existing) => {
+				if (!this.popover || !this.popover.contains(deckBadge)) {
+					return;
+				}
+				if (existing?.deckName) {
+					deckBadge.hidden = false;
+					deckBadge.textContent = `已在：${existing.deckName}`;
+					deckBadge.title = `该词已在牌组「${existing.deckName}」中`;
+					if (saveLabel) {
+						saveLabel.textContent = "更换牌组";
+					}
+					saveBtn.title = "选择牌组（可更换）";
+				}
+			});
+
+			saveBtn.onclick = (e) => {
+				e.stopPropagation();
+				e.preventDefault();
+				void this.promptDeckAndSaveToWeave(options, saveBtn, deckBadge, e);
+			};
+			actionsDiv.appendChild(saveBtn);
+			popover.appendChild(actionsDiv);
+		}
+
 		// 添加到页面
 		doc.body.appendChild(popover);
 		this.popover = popover;
@@ -516,10 +617,21 @@ export default class FingertipTranslationPlugin extends Plugin {
 		// 点击其他地方关闭
 		window.setTimeout(() => {
 			const clickOutsideHandler = (e: MouseEvent) => {
-				if (this.popover && !this.popover.contains(e.target as Node)) {
-					this.hidePopover();
+				if (!this.popover) {
 					doc.removeEventListener("mousedown", clickOutsideHandler);
+					return;
 				}
+				const target = e.target as Node | null;
+				if (this.popover.contains(target)) {
+					return;
+				}
+				// 牌组 Menu 挂在 body 上，点菜单项时不要关掉查词面板
+				const el = target as HTMLElement | null;
+				if (el?.closest?.(".menu")) {
+					return;
+				}
+				this.hidePopover();
+				doc.removeEventListener("mousedown", clickOutsideHandler);
 			};
 			doc.addEventListener("mousedown", clickOutsideHandler);
 		}, 10);
@@ -529,6 +641,131 @@ export default class FingertipTranslationPlugin extends Plugin {
 		if (this.popover) {
 			this.popover.remove();
 			this.popover = null;
+		}
+	}
+
+	/**
+	 * 弹出牌组列表，选择后再写入 Weave。
+	 */
+	private async promptDeckAndSaveToWeave(
+		options: {
+			originalText?: string;
+			text?: string;
+			meanings?: Array<{pos: string; def: string}>;
+			phonetics?: {us?: string; uk?: string};
+		},
+		button: HTMLButtonElement,
+		deckBadge: HTMLElement,
+		event: MouseEvent
+	): Promise<void> {
+		const term = String(options.originalText || "").trim();
+		if (!term) {
+			return;
+		}
+
+		const [decks, existing] = await Promise.all([
+			listVocabularyDeckChoices(this.app),
+			findExistingVocabularyTerm(this.app, term),
+		]);
+		const currentDeck =
+			existing?.deckName?.trim() || DEFAULT_VOCAB_DECK_NAME;
+
+		const menu = new Menu();
+		for (const deck of decks) {
+			const deckName = deck.name;
+			menu.addItem((item) => {
+				item
+					.setTitle(deckName)
+					.setChecked(deckName === currentDeck && Boolean(existing))
+					.onClick(() => {
+						void this.saveCurrentTermToWeave(
+							options,
+							button,
+							deckBadge,
+							deckName
+						);
+					});
+			});
+		}
+		menu.showAtMouseEvent(event);
+	}
+
+	/**
+	 * 将当前查询词写入 Weave 词卡（无音频附件；释义文本可选）。
+	 */
+	private async saveCurrentTermToWeave(
+		options: {
+			originalText?: string;
+			text?: string;
+			meanings?: Array<{pos: string; def: string}>;
+			phonetics?: {us?: string; uk?: string};
+		},
+		button: HTMLButtonElement,
+		deckBadge: HTMLElement,
+		deckName: string
+	): Promise<void> {
+		const term = String(options.originalText || "").trim();
+		if (!term) {
+			return;
+		}
+
+		button.disabled = true;
+		const previousLabel = button.querySelector("span")?.textContent || "加入复习";
+		const labelEl = button.querySelector("span");
+		if (labelEl) {
+			labelEl.textContent = "保存中…";
+		}
+
+		const glossFromMeanings = (options.meanings || [])
+			.map((m) => (m.pos ? `${m.pos} ${m.def}` : m.def).trim())
+			.filter(Boolean)
+			.join("；");
+		const gloss = glossFromMeanings || String(options.text || "").trim();
+		const phonetic =
+			options.phonetics?.us ||
+			options.phonetics?.uk ||
+			undefined;
+		const targetDeck =
+			String(deckName || DEFAULT_VOCAB_DECK_NAME).trim() ||
+			DEFAULT_VOCAB_DECK_NAME;
+
+		try {
+			const result = await saveVocabularyCardToWeave(this.app, {
+				term,
+				gloss,
+				phonetic,
+				deckName: targetDeck,
+			});
+			if (!result.success) {
+				new Notice(result.error || "加入 Weave 失败");
+				if (labelEl) {
+					labelEl.textContent = previousLabel;
+				}
+				button.disabled = false;
+				return;
+			}
+			deckBadge.hidden = false;
+			deckBadge.textContent = `已在：${targetDeck}`;
+			deckBadge.title = `该词已在牌组「${targetDeck}」中`;
+			if (result.created === false && !result.updated) {
+				new Notice(`「${term}」已在「${targetDeck}」中`);
+			} else if (result.updated) {
+				new Notice(`已更新「${term}」→ ${targetDeck}`);
+			} else {
+				new Notice(`已加入「${targetDeck}」：${term}`);
+			}
+			if (labelEl) {
+				labelEl.textContent = "更换牌组";
+			}
+			button.title = "选择牌组（可更换）";
+			button.disabled = false;
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			new Notice(`加入 Weave 失败：${message}`);
+			if (labelEl) {
+				labelEl.textContent = previousLabel;
+			}
+			button.disabled = false;
 		}
 	}
 }
