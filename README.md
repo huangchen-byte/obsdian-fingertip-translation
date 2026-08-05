@@ -16,6 +16,8 @@ A simple and efficient text translation plugin for Obsidian that supports multip
 - **Auto Pronunciation** - Automatically plays pronunciation after successful translation (toggleable)
 - **Multiple Accents** - Supports US English and UK English
 - **Lightweight** - No API Key required, works out of the box
+- **Optional Weave integration** - When the [Weave](https://github.com/zhuzhige123) memory plugin is enabled, the popover shows **加入复习** to save the looked-up word as a vocabulary card (no audio attachments). If Weave is not installed, the UI is unchanged.
+- **Official lookup API** - Other plugins can call `getOfficialAPI().lookup(term)` for dictionary results without opening the popover (used by Weave study UI to expand `::fingertip::word::` markers).
 
 ## Installation
 
